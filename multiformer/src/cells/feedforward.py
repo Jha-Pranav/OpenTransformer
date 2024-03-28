@@ -2,13 +2,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class GPT2MLP(nn.Module):
 
-    def __init__(self,config):
+    def __init__(self, config):
         super().__init__()
-        self.c_fc    = nn.Linear(config.n_embd, 4 * config.n_embd, bias=config.bias,device=config.device)
-        self.gelu    = nn.GELU()
-        self.c_proj  = nn.Linear(4 * config.n_embd, config.n_embd, bias=config.bias,device=config.device)
+        self.c_fc = nn.Linear(
+            config.n_embd, 4 * config.n_embd, bias=config.bias, device=config.device
+        )
+        self.gelu = nn.GELU()
+        self.c_proj = nn.Linear(
+            4 * config.n_embd, config.n_embd, bias=config.bias, device=config.device
+        )
         self.dropout = nn.Dropout(config.dropout)
 
     def forward(self, x):
@@ -17,4 +22,3 @@ class GPT2MLP(nn.Module):
         x = self.c_proj(x)
         x = self.dropout(x)
         return x
-        
