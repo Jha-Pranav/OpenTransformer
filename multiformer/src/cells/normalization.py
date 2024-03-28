@@ -15,5 +15,5 @@ class LayerNorm(nn.Module):
         device = x.device
 
         return F.layer_norm(
-            x, self.weight.shape, self.weight.to(device), self.bias.to(device), 1e-5
+            x, self.weight.shape, self.weight, self.bias, 1e-5
         )
