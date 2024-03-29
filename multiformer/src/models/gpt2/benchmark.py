@@ -72,8 +72,8 @@ if profile:
             wait=wait, warmup=warmup, active=active, repeat=1
         ),
         on_trace_ready=torch.profiler.tensorboard_trace_handler("./bench_log"),
-        record_shapes=False,
-        profile_memory=False,
+        record_shapes=True,
+        profile_memory=True,
         with_stack=False,  # incurs an additional overhead, disable if not needed
         with_flops=True,
         with_modules=False,  # only for torchscript models atm
