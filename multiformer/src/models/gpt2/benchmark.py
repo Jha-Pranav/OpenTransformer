@@ -3,19 +3,32 @@ import torch
 
 
 print("TORCH VERSION :", version("torch"))
-device = "cuda" if torch.cuda.is_available() else 'mps' if torch.backend.mps.is_available() else 'cpu'
-print('Device  : ', device.upper())
+device = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps" if torch.backend.mps.is_available() else "cpu"
+)
+print("Device  : ", device.upper())
 
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
 
-dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
+dtype = (
+    "bfloat16"
+    if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    else "float16"
+)
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
 from contextlib import nullcontext
-ctx = nullcontext() if device=='cpu' else torch.amp.autocast(device_type=device,dtype=torch.bfloat16)
+
+ctx = (
+    nullcontext()
+    if device == "cpu"
+    else torch.amp.autocast(device_type=device, dtype=torch.bfloat16)
+)
 
 from model import GPT2
 from config import GPT2Config
@@ -47,14 +60,20 @@ gptconf = GPT2Config(
 model = GPT2(gptconf)
 model.to(device)
 
-optimizer = configure_optimizers(model,
-    weight_decay=1e-2, learning_rate=1e-4, betas=(0.9, 0.95), device=device,fused=True
+optimizer = configure_optimizers(
+    model,
+    weight_decay=1e-2,
+    learning_rate=1e-4,
+    betas=(0.9, 0.95),
+    device=device,
+    fused=True,
 )
 
 print("Compiling model...")
 model = torch.compile(model)  # pytorch 2.0
 
 import torch._dynamo
+
 torch._dynamo.config.suppress_errors = True
 
 if profile:

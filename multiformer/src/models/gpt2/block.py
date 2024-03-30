@@ -12,9 +12,9 @@ class GPT2Block(nn.Module):
         super().__init__()
 
         self.config = config
-        self.ln_1 = LayerNorm(config.n_embd, bias=config.bias)
+        self.ln_1 = LayerNorm(config.n_embd, bias=config.bias, device=config.device)
         self.attn = GPT2CausalSelfAttention(config)
-        self.ln_2 = LayerNorm(config.n_embd, bias=config.bias)
+        self.ln_2 = LayerNorm(config.n_embd, bias=config.bias, device=config.device)
         self.mlp = GPT2MLP(config)
 
     def forward(self, x):
