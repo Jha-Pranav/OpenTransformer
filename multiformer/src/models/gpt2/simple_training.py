@@ -16,7 +16,7 @@ print("GPU  : ", device.upper())
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
 
-import datasets
+from tqdm import tqdm
 
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
@@ -120,58 +120,56 @@ ctx = (
     else torch.amp.autocast(device_type=device, dtype=torch.bfloat16)
 )
 
-# Training loop
+from tqdm import tqdm
+
+# Training loop with profiler and tqdm
 num_epochs = 30
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)  # Move model to GPU if available
+
 for epoch in range(num_epochs):
     total_loss = 0
 
-    for batch_idx, (x, y) in enumerate(train_loader):
-        x, y = x.to(device), y.to(device)
+    with torch.profiler.profile(
+        activities=[
+            torch.profiler.ProfilerActivity.CPU,
+            torch.profiler.ProfilerActivity.CUDA,
+        ],
+        on_trace_ready=torch.profiler.tensorboard_trace_handler(f"./gpt2_log/epoch_{epoch}"),
+        record_shapes=True,
+        profile_memory=True,
+        with_stack=False,
+        with_flops=True,
+        with_modules=False,
+    ) as prof:
+        for batch_idx, (x, y) in enumerate(tqdm(train_loader)):
+            x, y = x.to(device), y.to(device)
 
-        # Perform forward pass on GPU
-        logits, loss = model(x, y)
+            logits, loss = model(x, y)
 
-        # logits are not being used. let's delete it 
+            # logits are not being used. Let's delete it 
+            del logits
 
-        # Compute gradients on CPU
-        with torch.profiler.profile(
-            activities=[
-                torch.profiler.ProfilerActivity.CPU,
-                torch.profiler.ProfilerActivity.CUDA,
-            ],
-            on_trace_ready=torch.profiler.tensorboard_trace_handler("./gpt2_log"),
-            record_shapes=True,
-            profile_memory=True,
-            with_stack=False,
-            with_flops=True,
-            with_modules=False,
-        ) as prof:
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
 
-        # Update model parameters on GPU
-        optimizer.step()
-        total_loss += loss.item() * x.size(0)
+            optimizer.step()
+            total_loss += loss.item()
 
-        if (batch_idx + 1) % 2000 == 0:
-            print(
-                f"Epoch [{epoch+1}/{num_epochs}], Iteration [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.4f}"
-            )
-            checkpoint_path = f"model_checkpoint_epoch_{epoch+1}_iter_{batch_idx+1}.pt"
-            torch.save(model.state_dict(), checkpoint_path)
-            print(f"Saved model checkpoint at {checkpoint_path}")
-
-        # Delete tensors to free up GPU memory
-        del x, y, logits, loss
+            # Delete tensors to free up GPU memory
+            del x, y, loss
 
     # Average loss calculation
     average_loss = total_loss / len(train_loader.dataset)
     print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {average_loss:.4f}")
 
-
-    # # Save model after every epoch
-    # torch.save(model.state_dict(), f"model_epoch_{epoch+1}.pt")
+    # Move model to CPU before saving
+    model.to('cpu')
+    torch.cuda.empty_cache()
+    # Save model after every epoch
+    torch.save(model.state_dict(), f"model_epoch_{epoch+1}.pt")
+    # Move model back to GPU
+    model.to(device)
 
 # Close the TensorBoard writer
 writer.close()
