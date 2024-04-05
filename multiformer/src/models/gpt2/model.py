@@ -2,11 +2,12 @@ from importlib.metadata import version
 import torch
 
 print("TORCH VERSION :", version("torch"))
-device = (
-    "cuda"
-    if torch.cuda.is_available()
-    else "mps" if torch.backend.mps.is_available() else "cpu"
-)
+# device = (
+#     "cuda"
+#     if torch.cuda.is_available()
+#     else "mps" if torch.backend.mps.is_available() else "cpu"
+# )
+device = "cpu"
 print("Device  : ", device.upper())
 
 torch.manual_seed(123)
@@ -85,15 +86,17 @@ class GPT2(nn.Module):
         assert (
             t <= self.config.block_size
         ), f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
-        pos = torch.arange(0, t, dtype=torch.long, device=device)
+        pos = torch.arange(0, t, dtype=idx.dtype, device=device)
 
         tok_emb = self.transformer.wte(idx)  # b,t,n_embd
         pos_emb = self.transformer.wpe(pos)  # b,t,n_embd
 
         x = self.transformer.drop(tok_emb + pos_emb)
+
         for block in self.transformer.h:
             x = block(x)
         x = self.transformer.ln_f(x)
+
         if targets is not None:
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
@@ -222,15 +225,38 @@ class GPT2(nn.Module):
 
 
 if __name__ == "__main__":
+
+    from src.models.gpt2.config import GPT2Config
     from src.models.gpt2.model import GPT2
 
-    config = GPT2Config()
+    gpt_conf = {
+        "block_size": 1024,
+        "vocab_size": 35000,
+        "n_layer": 8,
+        "n_head": 12,
+        "n_embd": 768,
+        "dropout": 0.0,
+        "bias": True,
+        "device": device,
+    }
+
+    config = GPT2Config(**gpt_conf)
     model = GPT2(config)
 
-    # Inference Sanity Check
-    idx = torch.randint(low=1, high=1024, size=(80, 1024), device=device)
+    ## Inference Sanity Check
+    # model.eval()
+    # idx = torch.randint(low=1, high=1024, size=(80, 1024), device=device)
 
-    idx_next = model.generate(idx, 15, top_k=10)
-    print(idx_next.shape)
+    # idx_next = model.generate(idx, 15, top_k=10)
+    # print(idx_next.shape)
 
     # Training Sanity Check
+    model.train()
+    device = "cpu"
+    model.to(device)
+
+    x, y = torch.randint(0, 32000, (8, 1024), device=device), torch.randint(
+        0, 32000, (8, 1024), device=device
+    )
+    logits, loss = model(x, y)
+    print(logits.shape, loss.shape)

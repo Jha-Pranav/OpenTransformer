@@ -24,36 +24,28 @@ from torch.nn.utils.rnn import pad_sequence
 import torch._dynamo
 
 torch._dynamo.config.suppress_errors = True
-
 from src.tokenize.tokenizer import Tokenizer
-#-------------------------------------------
-block_size  = 1024
-batch = 8   # TODO : Adjust batch size based on dynamic input dim
-#-----------------------------------------
-
-
 
 TOKENIZER_CHECKPOINT = (
     "/home/pranav-pc/projects/OpenTransformer/multiformer/tokenizer_checkpoints/"
 )
 
-# Load dataset from Hugging Face datasets library
-from datasets import load_dataset
-
-dataset = load_dataset("imdb")
-
 tokenizer = Tokenizer(TOKENIZER_CHECKPOINT)
 
-data = dataset.map(
-    lambda example: {"idx": [en[:block_size] for en in tokenizer.encode(example["text"])]},
-    batch_size=512,
-    batched=True,
-    remove_columns=dataset["train"].column_names,
+# -------------------------------------------
+block_size = 728
+batch = 28  # TODO : Adjust batch size based on dynamic input dim
+# -----------------------------------------
+from datasets import load_from_disk
+
+data = load_from_disk(
+    "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/imdb.hf"
 )
 
 
 # Define collate function to handle padding
 def collate_fn(batch):
+    batch = [en[:block_size] for en in batch]
     x_batch = [torch.tensor(en[:-1]) for en in batch]  # Extract x (remove last token)
     y_batch = [torch.tensor(en[1:]) for en in batch]  # Extract y (remove first token)
     x_padded = pad_sequence(
@@ -82,9 +74,9 @@ from src.models.gpt2.model import GPT2
 gpt_conf = {
     "block_size": block_size,
     "vocab_size": tokenizer.vocab_size(),
-    "n_layer": 8,
-    "n_head": 12,
-    "n_embd": 768,
+    "n_layer": 1,
+    "n_head": 8,
+    "n_embd": 512,
     "dropout": 0.0,
     "bias": True,
     "device": device,
@@ -97,7 +89,7 @@ model = GPT2(config)
 from torch.utils.tensorboard import SummaryWriter
 
 # Initialize TensorBoard writer for logging
-writer = SummaryWriter(log_dir="gpt2_log")
+writer = SummaryWriter(log_dir="tensorboard/gpt2/")
 
 from src.cells.optim_func import configure_optimizers
 
@@ -123,7 +115,7 @@ ctx = (
 from tqdm import tqdm
 
 # Training loop with profiler and tqdm
-num_epochs = 30
+num_epochs = 5
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)  # Move model to GPU if available
 
@@ -135,7 +127,9 @@ for epoch in range(num_epochs):
             torch.profiler.ProfilerActivity.CPU,
             torch.profiler.ProfilerActivity.CUDA,
         ],
-        on_trace_ready=torch.profiler.tensorboard_trace_handler(f"./gpt2_log/epoch_{epoch}"),
+        on_trace_ready=torch.profiler.tensorboard_trace_handler(
+            f".tensorboard/gpt2/epoch_{epoch}"
+        ),
         record_shapes=True,
         profile_memory=True,
         with_stack=False,
@@ -147,14 +141,19 @@ for epoch in range(num_epochs):
 
             logits, loss = model(x, y)
 
-            # logits are not being used. Let's delete it 
+            # logits are not being used. Let's delete it
             del logits
 
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
-
             optimizer.step()
             total_loss += loss.item()
+
+            if not batch_idx % 15:
+                torch.save(
+                    model.state_dict(),
+                    f"model_batch_idx_{batch_idx+1}_epoch_{epoch+1}.pt",
+                )
 
             # Delete tensors to free up GPU memory
             del x, y, loss
@@ -162,9 +161,10 @@ for epoch in range(num_epochs):
     # Average loss calculation
     average_loss = total_loss / len(train_loader.dataset)
     print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {average_loss:.4f}")
+    writer.add_scalar("Loss/Train", average_loss, epoch)
 
-    # Move model to CPU before saving
-    model.to('cpu')
+    # # Move model to CPU before saving
+    # model.to('cpu')
     torch.cuda.empty_cache()
     # Save model after every epoch
     torch.save(model.state_dict(), f"model_epoch_{epoch+1}.pt")
