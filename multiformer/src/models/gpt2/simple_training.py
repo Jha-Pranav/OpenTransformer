@@ -1,3 +1,4 @@
+# --------------- IMPORTs -----------------------
 from importlib.metadata import version
 import torch
 import warnings
@@ -20,32 +21,50 @@ from tqdm import tqdm
 
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
+from datasets import load_from_disk
 
+from torch.utils.tensorboard import SummaryWriter
 import torch._dynamo
 
 torch._dynamo.config.suppress_errors = True
 from src.tokenize.tokenizer import Tokenizer
 
-TOKENIZER_CHECKPOINT = (
-    "/home/pranav-pc/projects/OpenTransformer/multiformer/tokenizer_checkpoints/"
-)
+import os
 
-tokenizer = Tokenizer(TOKENIZER_CHECKPOINT)
+from contextlib import nullcontext
 
 # -------------------------------------------
+BASE_URL = "/home/pranav-pc/projects/OpenTransformer/multiformer/"
+TOKENIZER_CHECKPOINT = os.path.join(BASE_URL, "tokenizer_checkpoints")
+tokenizer = Tokenizer(TOKENIZER_CHECKPOINT)
+
 block_size = 728
 batch = 28  # TODO : Adjust batch size based on dynamic input dim
-# -----------------------------------------
-from datasets import load_from_disk
 
-data = load_from_disk(
-    "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/imdb.hf"
+gpt_conf = {
+    "block_size": block_size,
+    "vocab_size": tokenizer.vocab_size(),
+    "n_layer": 1,
+    "n_head": 8,
+    "n_embd": 512,
+    "dropout": 0.0,
+    "bias": True,
+    "device": device,
+}
+
+ctx = (
+    nullcontext()
+    if device == "cpu"
+    else torch.amp.autocast(device_type=device, dtype=torch.bfloat16)
 )
+# -----------------------------------------
+
+data = load_from_disk(BASE_URL + "data/interim/imdb.hf")
 
 
 # Define collate function to handle padding
 def collate_fn(batch):
-    batch = [en[:block_size] for en in batch]
+    batch = [en[:block_size] for en in batch]  # TODO : Write code for overflow
     x_batch = [torch.tensor(en[:-1]) for en in batch]  # Extract x (remove last token)
     y_batch = [torch.tensor(en[1:]) for en in batch]  # Extract y (remove first token)
     x_padded = pad_sequence(
@@ -64,29 +83,15 @@ train_data = sorted(data["train"]["idx"], key=lambda x: len(x))
 train_loader = DataLoader(
     train_data, batch_size=batch, collate_fn=collate_fn, shuffle=False
 )
-
-
+# ---------------------------------------------
 ## Training
 
 from src.models.gpt2.config import GPT2Config
 from src.models.gpt2.model import GPT2
 
-gpt_conf = {
-    "block_size": block_size,
-    "vocab_size": tokenizer.vocab_size(),
-    "n_layer": 1,
-    "n_head": 8,
-    "n_embd": 512,
-    "dropout": 0.0,
-    "bias": True,
-    "device": device,
-}
 
 config = GPT2Config(**gpt_conf)
 model = GPT2(config)
-
-
-from torch.utils.tensorboard import SummaryWriter
 
 # Initialize TensorBoard writer for logging
 writer = SummaryWriter(log_dir="tensorboard/gpt2/")
@@ -103,21 +108,12 @@ optimizer = configure_optimizers(
 )
 model.to(device)
 model = torch.compile(model)
+model.to(device)
 
-from contextlib import nullcontext
-
-ctx = (
-    nullcontext()
-    if device == "cpu"
-    else torch.amp.autocast(device_type=device, dtype=torch.bfloat16)
-)
-
-from tqdm import tqdm
 
 # Training loop with profiler and tqdm
 num_epochs = 5
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)  # Move model to GPU if available
+
 
 for epoch in range(num_epochs):
     total_loss = 0
@@ -128,7 +124,7 @@ for epoch in range(num_epochs):
             torch.profiler.ProfilerActivity.CUDA,
         ],
         on_trace_ready=torch.profiler.tensorboard_trace_handler(
-            f".tensorboard/gpt2/epoch_{epoch}"
+            f"tensorboard/gpt2/epoch_{epoch}"
         ),
         record_shapes=True,
         profile_memory=True,

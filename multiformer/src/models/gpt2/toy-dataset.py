@@ -15,9 +15,9 @@ data = dataset.map(
     lambda example: {"idx": tokenizer.encode(example["text"])},
     batch_size=512,
     batched=True,
-    remove_columns=dataset["train"].column_names,
+    remove_columns=["text"],
 )
-
+print(data)
 data.save_to_disk(
     "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/imdb.hf"
 )

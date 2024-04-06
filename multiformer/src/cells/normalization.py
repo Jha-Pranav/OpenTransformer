@@ -17,3 +17,17 @@ class LayerNorm(nn.Module):
         device = x.device
 
         return F.layer_norm(x, self.weight.shape, self.weight, self.bias, 1e-5)
+
+
+class RMSLayerNorm(nn.Module):
+    def __init__(self, dim: int, eps: float = 1e-6):
+        super().__init__()
+        self.eps = eps
+        self.w = nn.Parameter(torch.ones(dim))
+
+    def forward(self, x):
+        rvariance = torch.rsqrt(
+            (x.pow(2)).mean(dim=-1, keepdim=True) + self.eps
+        )  # 1/variance
+        norm = (x * rvariance).type_as(x)
+        return self.w * norm
