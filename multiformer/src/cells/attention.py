@@ -56,44 +56,67 @@ class GPT2CausalSelfAttention(nn.Module):
             y.transpose(1, 2).contiguous().view(B, T, C)
         )  # re-assemble all head outputs side by side
         return self.resid_dropout(self.c_proj(y))
-    
+
 
 class GQMultiHeadAttention(nn.Module):
-    def __init__(self,args):
+    def __init__(self, args):
         super().__init__()
 
         args.num_attention_heads % args.num_key_value_heads == 0, "Head counts should be divisible KV Heads counts"
-        self.group_factor = args.num_attention_heads // args.num_key_value_heads 
+        self.group_factor = args.num_attention_heads // args.num_key_value_heads
         self.head_dim = args.emebdding_dim // args.num_attention_heads
 
-        self.wq = nn.Linear(args.emebdding_dim, args.emebdding_dim,bias=args.attention_bias)
-        self.wk = nn.Linear(args.emebdding_dim, args.emebdding_dim//self.group_factor,bias=args.attention_bias)
-        self.wv = nn.Linear(args.emebdding_dim, args.emebdding_dim//self.group_factor,bias=args.attention_bias)
-        self.wo = nn.Linear(args.emebdding_dim, args.emebdding_dim,bias=args.attention_bias)
+        self.wq = nn.Linear(
+            args.emebdding_dim, args.emebdding_dim, bias=args.attention_bias
+        )
+        self.wk = nn.Linear(
+            args.emebdding_dim,
+            args.emebdding_dim // self.group_factor,
+            bias=args.attention_bias,
+        )
+        self.wv = nn.Linear(
+            args.emebdding_dim,
+            args.emebdding_dim // self.group_factor,
+            bias=args.attention_bias,
+        )
+        self.wo = nn.Linear(
+            args.emebdding_dim, args.emebdding_dim, bias=args.attention_bias
+        )
 
         self.dropout = args.attention_dropout
         self.residual_dropout = nn.Dropout(args.residual_dropout)
-        self.rope_q = RotaryEmbedding(self.head_dim,args.max_seq_len,device=args.device)
-        self.rope_k = RotaryEmbedding(self.head_dim,args.max_seq_len,device=args.device)
 
-        # Freeze the parameters rope_q and rope_k
-        self.rope_q.requires_grad_(False)
-        self.rope_k.requires_grad_(False)
-
-    def forward(self,x:torch.Tensor):
-        b,seqlen,_ = x.shape
+    def forward(
+        self,
+        x: torch.Tensor,
+        rope_q: RotaryEmbedding,
+        rope_k: RotaryEmbedding,
+        is_causal=True,
+    ):
+        b, seqlen, _ = x.shape
         # QKV
-        xq,xk,xv = self.wq(x).view(b,seqlen,-1,self.head_dim),self.wk(x).view(b,seqlen,-1,self.head_dim),self.wv(x).view(b,seqlen,-1,self.head_dim)
+        xq, xk, xv = (
+            self.wq(x).view(b, seqlen, -1, self.head_dim),
+            self.wk(x).view(b, seqlen, -1, self.head_dim),
+            self.wv(x).view(b, seqlen, -1, self.head_dim),
+        )
         # RoPE on Q,K
-        xq = self.rope_q(xq).transpose(1, 2)  
-        xk = self.rope_k(xk).transpose(1, 2)
-        
+        xq = rope_q(xq).transpose(1, 2)
+        xk = rope_k(xk).transpose(1, 2)
+
         xv = xv.transpose(1, 2)
-        if hasattr(F, 'scaled_dot_product_attention'):
-            output = F.scaled_dot_product_attention(xq, xk, xv, attn_mask=None, dropout_p=self.dropout if self.training else 0.0, is_causal=True)
+        if hasattr(F, "scaled_dot_product_attention"):
+            output = F.scaled_dot_product_attention(
+                xq,
+                xk,
+                xv,
+                attn_mask=None,
+                dropout_p=self.dropout if self.training else 0.0,
+                is_causal=is_causal,
+            )
         else:
-            raise NotImplemented('Upgrade to pytorch version >= 2.0')
-            
+            raise NotImplemented("Upgrade to pytorch version >= 2.0")
+
         # restore time as batch dimension and concat heads
         output = output.transpose(1, 2).contiguous().view(b, seqlen, -1)
         return self.residual_dropout(self.wo(output))
