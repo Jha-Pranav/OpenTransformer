@@ -10,7 +10,6 @@ from src.cells.normalization import RMSLayerNorm
 from typing import Optional
 from src.cells.position import RotaryEmbedding
 
-
 class Transformer(nn.Module):
     def __init__(self, args: ModelArgs):
         super().__init__()

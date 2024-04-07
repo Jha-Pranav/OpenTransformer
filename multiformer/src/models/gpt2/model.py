@@ -33,10 +33,10 @@ class GPT2(nn.Module):
         self.transformer = nn.ModuleDict(
             dict(
                 wte=nn.Embedding(
-                    config.vocab_size, config.n_embd, device=config.device
+                    config.vocab_size, config.n_embd, device=config.device,padding_idx=2  #make sure to update padding_idx based on the tokenizer #TODO : Correct id for gpt2
                 ),
                 wpe=nn.Embedding(
-                    config.block_size, config.n_embd, device=config.device
+                    config.block_size, config.n_embd, device=config.device,padding_idx=2
                 ),
                 drop=nn.Dropout(config.dropout),
                 h=nn.ModuleList([GPT2Block(config) for _ in range(config.n_layer)]),

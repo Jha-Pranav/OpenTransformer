@@ -107,7 +107,7 @@ optimizer = configure_optimizers(
     fused=True,
 )
 model.to(device)
-model = torch.compile(model)
+model = torch.compile(model,dynamic=True)
 model.to(device)
 
 

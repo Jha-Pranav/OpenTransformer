@@ -17,7 +17,7 @@ data = dataset.map(
     batched=True,
     remove_columns=["text"],
 )
-print(data)
+
 data.save_to_disk(
     "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/imdb.hf"
 )

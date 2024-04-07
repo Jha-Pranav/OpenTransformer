@@ -35,15 +35,15 @@ from contextlib import nullcontext
 from src.models.blm.create_dataloader import data_iter
 
 # -------------------------------------------
-batch=16
+batch=64
 block_size=1024
 #--------------------------------------
 
-train_loader = data_iter(batch=16,block_size=1024)
+train_loader = data_iter(batch=batch,block_size=block_size)
 
 conf = {
     "vocab_size": 32000,
-    "emebdding_dim": 768,
+    "emebdding_dim": 512,
     "max_seq_len": block_size,
     "embedding_dropout": 0.0,
     "rms_norm_eps": 1e-05,
@@ -90,7 +90,7 @@ optimizer = configure_optimizers(
     fused=False,
 )
 model.to(device)
-model = torch.compile(model)
+model = torch.compile(model,dynamic=True)
 model.to(device)
 
 
@@ -117,8 +117,8 @@ for epoch in range(num_epochs):
     ) as prof:
         for batch_idx, (x, y) in enumerate(tqdm(train_loader)):
             x, y = x.to(device), y.to(device)
-
-            logits, loss = model(x, y)
+            with ctx:
+                logits, loss = model(x, y)
 
             # logits are not being used. Let's delete it
             del logits
