@@ -35,11 +35,11 @@ from contextlib import nullcontext
 from src.models.blm.create_dataloader import data_iter
 
 # -------------------------------------------
-batch=64
-block_size=1024
-#--------------------------------------
+batch = 64
+block_size = 1024
+# --------------------------------------
 
-train_loader = data_iter(batch=batch,block_size=block_size)
+train_loader = data_iter(batch=batch, block_size=block_size)
 
 conf = {
     "vocab_size": 32000,
@@ -90,7 +90,7 @@ optimizer = configure_optimizers(
     fused=False,
 )
 model.to(device)
-model = torch.compile(model,dynamic=True)
+model = torch.compile(model, dynamic=True)
 model.to(device)
 
 

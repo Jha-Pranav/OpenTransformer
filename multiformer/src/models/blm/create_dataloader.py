@@ -8,10 +8,12 @@ import functools
 
 
 # Define collate function to handle padding
-def collate_fn(batch:int,padding_id:int):
+def collate_fn(batch: int, padding_id: int):
     batch = pad_sequence(
-        (torch.LongTensor(_['idx']) for _ in batch), batch_first=True, padding_value=padding_id
-    ) # TODO : ShortTensor suffice our need but nn.Embedding don't support it. Using LOngTensor is a unnecessary waste of GPU memory 
+        (torch.LongTensor(_["idx"]) for _ in batch),
+        batch_first=True,
+        padding_value=padding_id,
+    )  # TODO : ShortTensor suffice our need but nn.Embedding don't support it. Using LOngTensor is a unnecessary waste of GPU memory
     x_batch = torch.stack([en[:-1] for en in batch])  # Extract x (remove last token)
     y_batch = torch.stack([en[1:] for en in batch])  # Extract y (remove first token)
     return x_batch, y_batch
@@ -23,21 +25,27 @@ class SampleByLen(Sampler):
         self.data_source = data_source
 
     def __iter__(self):
-        indices = sorted(range(len(self.data_source)), key=lambda i: len(self.data_source[i]))
+        indices = sorted(
+            range(len(self.data_source)), key=lambda i: len(self.data_source[i])
+        )
         return iter(indices)
-    
+
 
 # Create DataLoader with collate function
-def data_iter(batch:int=32,block_size:int=1024,data=None,tokenizer=None):
+def data_iter(batch: int = 32, block_size: int = 1024, data=None, tokenizer=None):
     if not tokenizer:
-        print('>> Loading Tokenizer')
+        print(">> Loading Tokenizer")
         BASE_URL = "/home/pranav-pc/projects/OpenTransformer/multiformer/"
         TOKENIZER_CHECKPOINT = os.path.join(BASE_URL, "tokenizer_checkpoints")
         tokenizer = Tokenizer(TOKENIZER_CHECKPOINT)
     if not data:
-        print('>> Loading Data')
+        print(">> Loading Data")
         data = load_from_disk(BASE_URL + "data/interim/TinyStories.hf")
     # data = data.map(lambda row:{'idx': row['idx'][:block_size]}) # This is resource intensive operation and takes few minutes of time. i.e, Caching it for now
     padding_id = tokenizer.eos_id()  # Same a end of Seq
-    return DataLoader(data, batch_size=batch, collate_fn=functools.partial(collate_fn,padding_id=padding_id), shuffle=False)#,pin_memory=True,num_workers=20)
-
+    return DataLoader(
+        data,
+        batch_size=batch,
+        collate_fn=functools.partial(collate_fn, padding_id=padding_id),
+        shuffle=False,
+    )  # ,pin_memory=True,num_workers=20)
