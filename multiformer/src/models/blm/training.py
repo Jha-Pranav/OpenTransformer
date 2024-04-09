@@ -35,15 +35,15 @@ from contextlib import nullcontext
 from src.models.blm.create_dataloader import data_iter
 
 # -------------------------------------------
-batch = 64
-block_size = 1024
+batch = 32
+block_size = 512
 # --------------------------------------
 
-train_loader = data_iter(batch=batch, block_size=block_size)
+train_loader = data_iter(batch=batch)
 
 conf = {
     "vocab_size": 32000,
-    "emebdding_dim": 512,
+    "emebdding_dim": 768,
     "max_seq_len": block_size,
     "embedding_dropout": 0.0,
     "rms_norm_eps": 1e-05,
@@ -51,14 +51,14 @@ conf = {
     "rope_theta": 10000.0,
     "attention_bias": False,
     "attention_dropout": 0.0,
-    "num_attention_heads": 8,
-    "num_key_value_heads": 8,
+    "num_attention_heads": 12,
+    "num_key_value_heads": 12,
     "use_cache": True,
     "use_sliding_window": True,
     "residual_dropout": 0.1,
     "mlp_dropout": 0.0,
     "mlp_hidden_size": int(1.3 * 768),
-    "num_layers": 5,
+    "num_layers": 4,
     "device": device,
 }
 ctx = (

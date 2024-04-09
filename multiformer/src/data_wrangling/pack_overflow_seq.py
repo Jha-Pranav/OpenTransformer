@@ -29,7 +29,8 @@ def pack_seq(
                 # overflow
                 overflow_token = [sos_id] + idx[end][index:]
                 if len(overflow_token) > min_seq_len:
-                    while len(overflow_token) > max_seq_len:
+                    index = True  # break the while loop there is not delimiter in the text (i.e [])
+                    while (len(overflow_token) > max_seq_len) and index:
                         index = [
                             indx
                             for indx, i in enumerate(overflow_token[:max_seq_len])
@@ -40,10 +41,7 @@ def pack_seq(
                             trim_token = overflow_token[:index] + [eos_id]
                             overflow_bucket.append(trim_token)
                             overflow_token = [sos_id] + overflow_token[index:]
-                        else:
-                            break
                     overflow_bucket.append(overflow_token)
-
             else:
                 print("Discarding sample at index : ", end)
 
@@ -60,12 +58,12 @@ def pack_seq(
                 )  # adding /n/n after each entry
                 small_bucket.extend(idx[start])
 
-                max_seq_len -= 2
+                # max_seq_len -= 2
                 while (start < end) and (
-                    len(small_bucket) + count[start + 1] <= max_seq_len
+                    len(small_bucket) + count[start + 1] <= (max_seq_len - 2)
                 ):
                     start += 1
-                    max_seq_len -= 2
+                    # max_seq_len -= 2
                     small_bucket.extend([para_separator, para_separator])
                     idx[start].pop()
                     small_bucket.extend(idx[start])

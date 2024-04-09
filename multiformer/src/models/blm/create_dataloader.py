@@ -29,10 +29,9 @@ class SampleByLen(Sampler):
             range(len(self.data_source)), key=lambda i: len(self.data_source[i])
         )
         return iter(indices)
-
-
+    
 # Create DataLoader with collate function
-def data_iter(batch: int = 32, block_size: int = 1024, data=None, tokenizer=None):
+def data_iter(batch: int = 32, data=None, tokenizer=None):
     if not tokenizer:
         print(">> Loading Tokenizer")
         BASE_URL = "/home/pranav-pc/projects/OpenTransformer/multiformer/"
@@ -40,12 +39,12 @@ def data_iter(batch: int = 32, block_size: int = 1024, data=None, tokenizer=None
         tokenizer = Tokenizer(TOKENIZER_CHECKPOINT)
     if not data:
         print(">> Loading Data")
-        data = load_from_disk(BASE_URL + "data/interim/TinyStories.hf")
-    # data = data.map(lambda row:{'idx': row['idx'][:block_size]}) # This is resource intensive operation and takes few minutes of time. i.e, Caching it for now
+        data = load_from_disk(BASE_URL + "data/interim/TinyStories_65>tk>512.hf")
     padding_id = tokenizer.eos_id()  # Same a end of Seq
+    # Create DataLoader with custom subset random sampler
     return DataLoader(
         data,
         batch_size=batch,
         collate_fn=functools.partial(collate_fn, padding_id=padding_id),
         shuffle=False,
-    )  # ,pin_memory=True,num_workers=20)
+        pin_memory=True,num_workers=20)
