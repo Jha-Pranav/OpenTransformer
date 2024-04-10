@@ -5,26 +5,30 @@ from src.tokenize.tokenizer import Tokenizer
 def read_data():
 
     data_train = load_dataset(
-        BASE_URL + "data/downloads/TinyStories",
+        BASE_URL + "/data/downloads/TinyStories",
         split="train",
     )
     data_validation = load_dataset(
-        BASE_URL + "data/downloads/TinyStories",
+        BASE_URL + "/data/downloads/TinyStories",
         split="validation",
     )
-    dataset = concatenate_datasets([data_train, data_validation])
-    return dataset
+    return data_train, data_validation
 
 
 def load_tokenizer():
-    TOKENIZER_CHECKPOINT = BASE_URL + "tokenizer_checkpoints/"
+    TOKENIZER_CHECKPOINT = BASE_URL + "/tokenizer_checkpoints/"
 
     tokenizer = Tokenizer(TOKENIZER_CHECKPOINT)
     return tokenizer
 
 
 def text2tokens(
-    dataset, batch_size: int, batched: int, num_proc: int, text_col: str = "text"
+    dataset,
+    tokenizer,
+    batch_size: int,
+    batched: int,
+    num_proc: int,
+    text_col: str = "text",
 ):
     dataset = dataset.map(
         lambda x: {"text": [en.strip() for en in x[text_col]]},
@@ -38,7 +42,7 @@ def text2tokens(
         batch_size=batch_size,
         batched=batched,
         num_proc=num_proc,
-        remove_columns=["text"],
+        remove_columns=[text_col],
     )
 
     return dataset
@@ -88,54 +92,25 @@ def pack_dataset(
     return dataset
 
 
-if __name__ == "__main__":
-    import argparse
-    import plotly.express as px
-
-    parser = argparse.ArgumentParser(description="Process some integers.")
-    parser.add_argument(
-        "--base_url",
-        default="/home/pranav-pc/projects/OpenTransformer/multiformer/",
-        help="Base URL",
-    )
-    parser.add_argument("--batch_size", type=int, default=int(1e5), help="Batch size")
-    parser.add_argument("--batched", default=True, help="Enable batching")
-    parser.add_argument("--num_proc", type=int, default=25, help="Number of processes")
-    parser.add_argument(
-        "--min_seq_len", type=int, default=65, help="Minimum sequence length"
-    )
-    parser.add_argument(
-        "--max_seq_len", type=int, default=512, help="Maximum sequence length"
-    )
-    parser.add_argument("--text_col", default="text", help="Text column name")
-    parser.add_argument("--use_cache", default=False, help="Use cache")
-
-    args = parser.parse_args()
-
-    BASE_URL = args.base_url
-
-    dataset = read_data()
-
+def _pre_process(dataset, args):
     if not args.use_cache:
         dataset.cleanup_cache_files()
 
     tokenizer = load_tokenizer()
 
     dataset = text2tokens(
-        dataset, args.batch_size, args.batched, args.num_proc, args.text_col
+        dataset, tokenizer, args.batch_size, args.batched, args.num_proc, args.text_col
     )
 
     dataset = length(dataset)
-    dataset = dataset.sort("len") 
+    dataset = dataset.sort("len")
 
-    dataset = dataset.filter(
-        lambda x: x["len"] > args.min_seq_len
-    ) 
+    dataset = dataset.filter(lambda x: x["len"] > args.min_seq_len)
 
-    fig = px.histogram(dataset["len"])
-    fig.update_layout(title_text=f"Histogram(len)_datasz_{len(dataset['len'])} ")
-    fig.write_html(f"TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}_raw.html")
-    fig.show()
+    # fig = px.histogram(dataset["len"])
+    # fig.update_layout(title_text=f"Histogram(len)_datasz_{len(dataset['len'])} ")
+    # fig.write_html(f"TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}_raw.html")
+    # fig.show()
 
     for _ in range(1, 5):
         batch_scale = _
@@ -149,23 +124,62 @@ if __name__ == "__main__":
             args.num_proc,
         )
         dataset = length(dataset)
-        dataset = dataset.sort("len")  
-        fig = px.histogram(dataset["len"])
-        fig.update_layout(
-            title_text=f"Histogram(len) {_}_datasz_{len(dataset['len'])} itr"
-        )
-        fig.write_html(
-            f"TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}_itr{_}.html"
-        )
-        fig.show()
+        dataset = dataset.sort("len")
+        # fig = px.histogram(dataset["len"])
+        # fig.update_layout(
+        #     title_text=f"Histogram(len) {_}_datasz_{len(dataset['len'])} itr"
+        # )
+        # fig.write_html(
+        #     f"TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}_itr{_}.html"
+        # )
+        # fig.show()
     # TODO : Below filter should not be required
-    dataset = dataset.filter(
-        lambda x: x["len"] < args.max_seq_len
-    ) 
+    dataset = dataset.filter(lambda x: x["len"] < args.max_seq_len)
 
     dataset = dataset.remove_columns("len")
+    return dataset
 
-    dataset.to_disk(
+
+if __name__ == "__main__":
+    import argparse
+    import plotly.express as px
+    import os
+
+    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser.add_argument(
+        "--base_url",
+        default=os.getcwd(),
+        help="Base URL",
+    )
+    parser.add_argument("--batch_size", type=int, default=int(1e5), help="Batch size")
+    parser.add_argument("--batched", default=True, help="Enable batching")
+    parser.add_argument(
+        "--num_proc", type=int, default=1, help="Number of processes"
+    )  # TODO: DEBUGG - Tokenizer don't add bos and eos in case of num_proc > 1. This is very weird.
+    parser.add_argument(
+        "--min_seq_len", type=int, default=65, help="Minimum sequence length"
+    )
+    parser.add_argument(
+        "--max_seq_len", type=int, default=512, help="Maximum sequence length"
+    )
+    parser.add_argument("--text_col", default="text", help="Text column name")
+    parser.add_argument("--use_cache", default=True, help="Use cache")
+
+    args = parser.parse_args()
+
+    BASE_URL = args.base_url
+
+    data_train, data_validation = read_data()
+
+    data_train, data_validation = _pre_process(data_train, args), _pre_process(
+        data_validation, args
+    )
+
+    data_train.save_to_disk(
         BASE_URL
-        + f"data/interim/TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
+        + f"/data/interim/TinyStories_train_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
+    )
+    data_validation.save_to_disk(
+        BASE_URL
+        + f"/data/interim/TinyStories_val_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
     )

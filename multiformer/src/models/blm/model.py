@@ -15,7 +15,9 @@ class Transformer(nn.Module):
     def __init__(self, args: ModelArgs):
         super().__init__()
 
-        self.tok_embd = nn.Embedding(args.vocab_size, args.emebdding_dim)
+        self.tok_embd = nn.Embedding(
+            args.vocab_size, args.emebdding_dim, padding_idx=args.padding_idx
+        )
         self.dropout = nn.Dropout(args.embedding_dropout)
         self.rope_q = RotaryEmbedding(
             args.emebdding_dim // args.num_attention_heads,

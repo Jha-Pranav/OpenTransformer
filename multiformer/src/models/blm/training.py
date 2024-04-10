@@ -34,8 +34,16 @@ from contextlib import nullcontext
 
 from src.models.blm.create_dataloader import data_iter
 
+from src.tokenize.tokenizer import Tokenizer
+
+TOKENIZER_CHECKPOINT = (
+    "/home/pranav-pc/projects/OpenTransformer/multiformer/tokenizer_checkpoints/"
+)
+
+tokenizer = Tokenizer(TOKENIZER_CHECKPOINT)
+
 # -------------------------------------------
-batch = 32
+batch = 12
 block_size = 512
 # --------------------------------------
 
@@ -60,6 +68,7 @@ conf = {
     "mlp_hidden_size": int(1.3 * 768),
     "num_layers": 4,
     "device": device,
+    "padding_idx": tokenizer.eos_id(),
 }
 ctx = (
     nullcontext()
@@ -95,7 +104,7 @@ model.to(device)
 
 
 # Training loop with profiler and tqdm
-num_epochs = 3
+num_epochs = 10
 
 
 for epoch in range(num_epochs):

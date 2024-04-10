@@ -29,7 +29,8 @@ class SampleByLen(Sampler):
             range(len(self.data_source)), key=lambda i: len(self.data_source[i])
         )
         return iter(indices)
-    
+
+
 # Create DataLoader with collate function
 def data_iter(batch: int = 32, data=None, tokenizer=None):
     if not tokenizer:
@@ -47,4 +48,6 @@ def data_iter(batch: int = 32, data=None, tokenizer=None):
         batch_size=batch,
         collate_fn=functools.partial(collate_fn, padding_id=padding_id),
         shuffle=False,
-        pin_memory=True,num_workers=20)
+        pin_memory=True,
+        num_workers=20,
+    )

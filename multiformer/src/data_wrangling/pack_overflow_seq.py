@@ -15,7 +15,6 @@ def pack_seq(
     end = len(count) - 1
 
     while start < end:
-        max_seq_len = max_seq_len
         if count[end] >= max_seq_len:
             index = [
                 indx
@@ -29,7 +28,7 @@ def pack_seq(
                 # overflow
                 overflow_token = [sos_id] + idx[end][index:]
                 if len(overflow_token) > min_seq_len:
-                    index = True  # break the while loop there is not delimiter in the text (i.e [])
+                    index = True  # break the while loop there is no delimiter in the text (i.e [])
                     while (len(overflow_token) > max_seq_len) and index:
                         index = [
                             indx
@@ -38,10 +37,10 @@ def pack_seq(
                         ]
                         if len(index):
                             index = index[-1] + 1
-                            trim_token = overflow_token[:index] + [eos_id]
+                            trim_token = overflow_token[:index]
                             overflow_bucket.append(trim_token)
                             overflow_token = [sos_id] + overflow_token[index:]
-                    overflow_bucket.append(overflow_token)
+                    overflow_bucket.append(overflow_token + [eos_id])
             else:
                 print("Discarding sample at index : ", end)
 
@@ -50,8 +49,10 @@ def pack_seq(
                 bucket.append(idx[end])
             else:
                 small_bucket = []
-                idx[end].pop()  # remove eod_id
-                idx[start].pop()
+                if idx[end][-1] == eos_id:
+                    idx[end].pop()  # remove eod_id
+                if idx[start][-1] == eos_id:
+                    idx[start].pop()
                 small_bucket.extend(idx[end])
                 small_bucket.extend(
                     [para_separator, para_separator]
@@ -65,7 +66,8 @@ def pack_seq(
                     start += 1
                     # max_seq_len -= 2
                     small_bucket.extend([para_separator, para_separator])
-                    idx[start].pop()
+                    if idx[start][-1] == eos_id:
+                        idx[start].pop()
                     small_bucket.extend(idx[start])
                 small_bucket.append(eos_id)
                 bucket.append(small_bucket)

@@ -30,7 +30,10 @@ class ModelArgs:
     num_layers: int = 32
 
     device: str = (
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps" if torch.backend.mps.is_available() else "cpu"
+        (
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps" if torch.backend.mps.is_available() else "cpu"
+        ),
     )
+    padding_idx: int = 2
