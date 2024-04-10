@@ -10,6 +10,9 @@ from src.cells.normalization import RMSLayerNorm
 from typing import Optional
 from src.cells.position import RotaryEmbedding
 
+import lightning as pl
+
+
 
 class Transformer(nn.Module):
     def __init__(self, args: ModelArgs):

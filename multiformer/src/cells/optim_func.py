@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def configure_optimizers(
+def config_optimizer(
     model, weight_decay, learning_rate, betas, device, fused: bool = True
 ):
     # start with all of the candidate parameters

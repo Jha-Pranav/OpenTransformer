@@ -96,9 +96,9 @@ model = GPT2(config)
 # Initialize TensorBoard writer for logging
 writer = SummaryWriter(log_dir="tensorboard/gpt2/")
 
-from src.cells.optim_func import configure_optimizers
+from src.cells.optim_func import config_optimizer
 
-optimizer = configure_optimizers(
+optimizer = config_optimizer(
     model,
     weight_decay=1e-2,
     learning_rate=1e-4,

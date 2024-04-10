@@ -32,7 +32,7 @@ ctx = (
 
 from model import GPT2
 from config import GPT2Config
-from src.cells.optim_func import configure_optimizers
+from src.cells.optim_func import config_optimizer
 
 
 # ----------
@@ -60,7 +60,7 @@ gptconf = GPT2Config(
 model = GPT2(gptconf)
 model.to(device)
 
-optimizer = configure_optimizers(
+optimizer = config_optimizer(
     model,
     weight_decay=1e-2,
     learning_rate=1e-4,
