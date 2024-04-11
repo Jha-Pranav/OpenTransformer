@@ -41,7 +41,7 @@ def text2tokens(
         lambda example: {"idx": tokenizer.encode(example[text_col])},
         batch_size=batch_size,
         batched=batched,
-        num_proc=1, # TODO: DEBUGG - Tokenizer don't add bos and eos in case of num_proc > 1. This is very weird.
+        num_proc=1,  # TODO: DEBUGG - Tokenizer don't add bos and eos in case of num_proc > 1. This is very weird.
         remove_columns=[text_col],
     )
 
@@ -153,9 +153,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--batch_size", type=int, default=int(1e5), help="Batch size")
     parser.add_argument("--batched", default=True, help="Enable batching")
-    parser.add_argument(
-        "--num_proc", type=int, default=28, help="Number of processes"
-    )  
+    parser.add_argument("--num_proc", type=int, default=28, help="Number of processes")
     parser.add_argument(
         "--min_seq_len", type=int, default=65, help="Minimum sequence length"
     )

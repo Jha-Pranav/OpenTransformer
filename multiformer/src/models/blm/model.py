@@ -13,7 +13,6 @@ from src.cells.position import RotaryEmbedding
 import lightning as pl
 
 
-
 class Transformer(nn.Module):
     def __init__(self, args: ModelArgs):
         super().__init__()

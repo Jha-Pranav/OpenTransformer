@@ -9,21 +9,31 @@ from src.models.blm.block import Block
 from src.cells.normalization import RMSLayerNorm
 from typing import Optional
 from src.cells.position import RotaryEmbedding
-from src.cells.optim_func import config_optimizer
 
 import lightning.pytorch as pl
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 import functools
 
-from datasets import load_from_disk, load_dataset
+from datasets import load_from_disk
 from tqdm.notebook import tqdm
 
 import torch._dynamo
+
 torch._dynamo.config.suppress_errors = True
+
+from lightning.pytorch.callbacks import (
+        GradientAccumulationScheduler,
+        StochasticWeightAveraging,
+        ModelCheckpoint,
+        EarlyStopping,LearningRateFinder
+    )
+
+
 
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
+
 
 class TinyStoriesDataloader(pl.LightningDataModule):
     def __init__(
@@ -133,7 +143,7 @@ class Transformer(pl.LightningModule):
                     p, mean=0.0, std=0.02 / math.sqrt(2 * args.num_layers)
                 )
         self.lr = 1e-4
-        
+
     def __repr__(self):
         return f"{self.get_num_params()} Million Params Model"
 
@@ -154,9 +164,7 @@ class Transformer(pl.LightningModule):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(
-        self, tokens: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, tokens: torch.Tensor) -> torch.Tensor:
         x = self.dropout(self.tok_embd(tokens))
         for layer in self.layers:
             x = layer(
@@ -165,30 +173,30 @@ class Transformer(pl.LightningModule):
         x = self.norm(x)
         return x
 
-    def _common_step(self,batch,batch_index):
+    def _common_step(self, batch, batch_index):
         x, targets = batch
         logits = self.output(self.forward(x))
         loss = F.cross_entropy(
-                logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1
-            )
-        return loss
-        
-    def training_step(self,batch,batch_idx):
-        x,y = batch
-        
-        loss = self._common_step(batch,batch_idx)
-        self.log_dict({'train_loss':loss},prog_bar=True,on_step=False,on_epoch=True)
+            logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1
+        )
         return loss
 
-    def validation_step(self,batch,batch_idx):
-        x,y = batch
-        
-        loss = self._common_step(batch,batch_idx)
-        self.log_dict({'val_loss':loss},prog_bar=True,on_step=False,on_epoch=True)
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+
+        loss = self._common_step(batch, batch_idx)
+        self.log_dict({"train_loss": loss}, prog_bar=True, on_step=False, on_epoch=True)
         return loss
-        
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+
+        loss = self._common_step(batch, batch_idx)
+        self.log_dict({"val_loss": loss}, prog_bar=True, on_step=False, on_epoch=True)
+        return loss
+
     def configure_optimizers(self):
-        
+
         # start with all of the candidate parameters
         param_dict = {pn: p for pn, p in self.named_parameters()}
         # filter out those that do not require grad
@@ -200,18 +208,21 @@ class Transformer(pl.LightningModule):
             {"params": decay_params, "weight_decay": 1e-2},
             {"params": nodecay_params, "weight_decay": 0.0},
         ]
-        return torch.optim.AdamW(optim_groups,lr=self.lr,betas=(0.9, 0.95),fused=False)
+        return torch.optim.AdamW(
+            optim_groups, lr=self.lr, betas=(0.9, 0.95), fused=False
+        )
 
-        
-    def predict_step(self,batch,batch_idx,max_new_tokens=30,temperature=1.0, top_k=None):
+    def predict_step(
+        self, batch, batch_idx, max_new_tokens=30, temperature=1.0, top_k=None
+    ):
         for _ in range(max_new_tokens):
-            # trim the token to the max_len 
+            # trim the token to the max_len
             if batch.shape[1] > self.max_seq_len:
-                batch = batch[:,-self.max_seq_len:]
+                batch = batch[:, -self.max_seq_len :]
             # inference-time mini-optimization: only forward the output on the very last position
             logits = self.output(
-                    self(batch)[:, [-1], :]
-                )  # note: using list [-1] to preserve the time dim
+                self(batch)[:, [-1], :]
+            )  # note: using list [-1] to preserve the time dim
             # pluck the logits at the final step and scale by desired temperature
             logits = logits[:, -1, :] / temperature
             # optionally crop the logits to only the top k options
@@ -225,8 +236,18 @@ class Transformer(pl.LightningModule):
             # append sampled index to the running sequence and continue
             batch = torch.cat((batch, idx_next), dim=1)
         return batch
-    
-if __name__=="__main__":
+
+class FineTuneLearningRateFinder(LearningRateFinder):
+    def __init__(self, milestones, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.milestones = milestones
+
+    def on_train_epoch_start(self, trainer, pl_module):
+        if trainer.current_epoch in self.milestones or trainer.current_epoch == 0:
+
+            self.lr_find(trainer, pl_module)
+
+if __name__ == "__main__":
     BASE_URL = "/home/pranav-pc/projects/OpenTransformer/multiformer"
     data_path_train = BASE_URL + "/data/interim/TinyStories_train_65>tk>512.hf"
     data_path_val = BASE_URL + "/data/interim/TinyStories_val_65>tk>512.hf"
@@ -256,20 +277,26 @@ if __name__=="__main__":
         "mlp_dropout": 0.0,
         "mlp_hidden_size": int(1.3 * 768),
         "num_layers": 4,
-        "device": ("cuda"
+        "device": (
+            "cuda"
             if torch.cuda.is_available()
-            else "mps" if torch.backend.mps.is_available() else "cpu"),
+            else "mps" if torch.backend.mps.is_available() else "cpu"
+        ),
         "padding_idx": ds.tokenizer.eos_id(),
     }
 
     config = ModelArgs(**conf)
     model = Transformer(config)
-    model = torch.compile(model,dynamic=True)
+    model = torch.compile(model, dynamic=True)
 
-    from lightning.pytorch.callbacks import GradientAccumulationScheduler, StochasticWeightAveraging, ModelCheckpoint,EarlyStopping
-    accumulator = GradientAccumulationScheduler(scheduling={0: 6, 4: 4, 8: 3, 20:1})
 
-    logger = pl.loggers.TensorBoardLogger(save_dir='./blm-log/', name='blm', version=0.1)
+
+
+    accumulator = GradientAccumulationScheduler(scheduling={0: 6, 4: 4, 8: 3, 20: 1})
+
+    logger = pl.loggers.TensorBoardLogger(
+        save_dir="./blm-log/", name="blm", version=0.1
+    )
     # profiler = pl.profilers.PyTorchProfiler(
     #     on_trace_ready=torch.profiler.tensorboard_trace_handler('./blm-log/'),
     #     schedule=torch.profiler.schedule(skip_first=10, wait=10, warmup=1, active=2)
@@ -281,27 +308,35 @@ if __name__=="__main__":
         mode="min",
         dirpath="/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/",
         filename="baby-llm-{epoch:02d}-{train_loss:.3f}",
-        save_last= True,
-        every_n_train_steps= int(1e4),
-        save_on_train_epoch_end= True
+        save_last=True,
+        every_n_train_steps=int(1e4),
+        save_on_train_epoch_end=True,
     )
-    early_stop = EarlyStopping('train_loss',patience=10,verbose=True)
-    stochastic_weight_avg = StochasticWeightAveraging(swa_lrs=1e-2)
+    early_stop = EarlyStopping("train_loss", patience=10, verbose=True)
+    stochastic_weight_avg = StochasticWeightAveraging(swa_lrs=1e-6)
+    lr_finder = FineTuneLearningRateFinder(milestones=(5, 20))
 
     trainer = pl.Trainer(
         logger=logger,
         min_epochs=1,
         max_epochs=100,
-        precision='bf16-mixed',
+        precision="bf16-mixed",
         enable_model_summary=True,
         # profiler=profiler,
-        callbacks=[early_stop,checkpoint_callback,accumulator,stochastic_weight_avg],
+        callbacks=[early_stop, checkpoint_callback, accumulator, stochastic_weight_avg,lr_finder],
         default_root_dir="/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/",
-        enable_checkpointing  = True,
+        enable_checkpointing=True,
         # fast_dev_run=True,
         log_every_n_steps=int(1e2),
-        enable_progress_bar = True,
-        gradient_clip_val=1.0)
-    torch.set_float32_matmul_precision('medium')
+        enable_progress_bar=True,
+        gradient_clip_val=1.0,
+    )
+    torch.set_float32_matmul_precision("medium")
+    model = Transformer.load_from_checkpoint("/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/baby-llm-epoch=06-train_loss=1.248-v1.ckpt")
+    model = torch.compile(model, dynamic=True)
     model.train()
-    trainer.fit(model, ds,ckpt_path="/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/last.ckpt")
+    trainer.fit(
+        model,
+        ds,
+        ckpt_path="/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/baby-llm-epoch=06-train_loss=1.248-v1.ckpt",
+    )
