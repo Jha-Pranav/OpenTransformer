@@ -23,12 +23,12 @@ import torch._dynamo
 torch._dynamo.config.suppress_errors = True
 
 from lightning.pytorch.callbacks import (
-        GradientAccumulationScheduler,
-        StochasticWeightAveraging,
-        ModelCheckpoint,
-        EarlyStopping,LearningRateFinder
-    )
-
+    GradientAccumulationScheduler,
+    StochasticWeightAveraging,
+    ModelCheckpoint,
+    EarlyStopping,
+    LearningRateFinder,
+)
 
 
 torch.manual_seed(123)
@@ -237,6 +237,7 @@ class Transformer(pl.LightningModule):
             batch = torch.cat((batch, idx_next), dim=1)
         return batch
 
+
 class FineTuneLearningRateFinder(LearningRateFinder):
     def __init__(self, milestones, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -246,6 +247,7 @@ class FineTuneLearningRateFinder(LearningRateFinder):
         if trainer.current_epoch in self.milestones or trainer.current_epoch == 0:
 
             self.lr_find(trainer, pl_module)
+
 
 if __name__ == "__main__":
     BASE_URL = "/home/pranav-pc/projects/OpenTransformer/multiformer"
@@ -289,9 +291,6 @@ if __name__ == "__main__":
     model = Transformer(config)
     model = torch.compile(model, dynamic=True)
 
-
-
-
     accumulator = GradientAccumulationScheduler(scheduling={0: 6, 4: 4, 8: 3, 20: 1})
 
     logger = pl.loggers.TensorBoardLogger(
@@ -323,7 +322,13 @@ if __name__ == "__main__":
         precision="bf16-mixed",
         enable_model_summary=True,
         # profiler=profiler,
-        callbacks=[early_stop, checkpoint_callback, accumulator, stochastic_weight_avg,lr_finder],
+        callbacks=[
+            early_stop,
+            checkpoint_callback,
+            accumulator,
+            stochastic_weight_avg,
+            lr_finder,
+        ],
         default_root_dir="/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/",
         enable_checkpointing=True,
         # fast_dev_run=True,
@@ -332,7 +337,9 @@ if __name__ == "__main__":
         gradient_clip_val=1.0,
     )
     torch.set_float32_matmul_precision("medium")
-    model = Transformer.load_from_checkpoint("/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/baby-llm-epoch=06-train_loss=1.248-v1.ckpt")
+    model = Transformer.load_from_checkpoint(
+        "/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/baby-llm-epoch=06-train_loss=1.248-v1.ckpt"
+    )
     model = torch.compile(model, dynamic=True)
     model.train()
     trainer.fit(
