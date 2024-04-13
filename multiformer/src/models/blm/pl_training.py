@@ -16,7 +16,7 @@ from torch import nn
 torch.set_float32_matmul_precision("medium")
 torch._dynamo.config.suppress_errors = True
 
-import wandb
+
 from lightning.pytorch.callbacks import (
     EarlyStopping,
     GradientAccumulationScheduler,
@@ -25,15 +25,13 @@ from lightning.pytorch.callbacks import (
     StochasticWeightAveraging,
 )
 
-wandb.login()
-
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
 pl.seed_everything(123, workers=True)
 
 
 class Transformer(pl.LightningModule):
-    def __init__(self, args: ModelArgs):
+    def __init__(self, args: ModelArgs, is_causal=True, attn_mask=None):
         super().__init__()
         self.save_hyperparameters()
         self.max_seq_len = args.max_seq_len
@@ -56,7 +54,9 @@ class Transformer(pl.LightningModule):
         self.rope_q.requires_grad_(False)
         self.rope_k.requires_grad_(False)
 
-        self.layers = nn.ModuleList([Block(args) for lid in range(args.num_layers)])
+        self.layers = nn.ModuleList(
+            [Block(args, is_causal=is_causal, attn_mask=attn_mask) for _ in range(args.num_layers)]
+        )
 
         self.norm = RMSLayerNorm(args.emebdding_dim, eps=args.rms_norm_eps)
         self.output = nn.Linear(args.emebdding_dim, args.vocab_size, bias=False)
@@ -133,7 +133,15 @@ class Transformer(pl.LightningModule):
         ]
         return torch.optim.AdamW(optim_groups, lr=self.lr, betas=(0.9, 0.95), fused=False)
 
-    def predict_step(self, batch, batch_idx, max_new_tokens=30, temperature=1.0, top_k=None):
+    def predict_step(
+        self,
+        batch,
+        batch_idx,
+        max_new_tokens=30,
+        temperature=1.0,
+        top_k=None,
+        conditional_break: list = None,
+    ):
         for _ in range(max_new_tokens):
             # trim the token to the max_len
             if batch.shape[1] > self.max_seq_len:
@@ -154,6 +162,13 @@ class Transformer(pl.LightningModule):
             idx_next = torch.multinomial(probs, num_samples=1)
             # append sampled index to the running sequence and continue
             batch = torch.cat((batch, idx_next), dim=1)
+            if conditional_break:
+                last_three_tokens = batch[-1][-len(conditional_break) :]
+                if torch.equal(
+                    last_three_tokens, torch.LongTensor(conditional_break).to(batch.device)
+                ):
+                    break
+
         return batch
 
 
@@ -213,6 +228,9 @@ if __name__ == "__main__":
 
     accumulator = GradientAccumulationScheduler(scheduling={0: 4, 4: 3, 10: 2})
 
+    import wandb
+
+    wandb.login()
     wandb_logger = WandbLogger(
         name="blm-1024",
         save_dir="blm-1024/",
