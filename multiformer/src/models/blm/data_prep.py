@@ -1,9 +1,12 @@
-from datasets import load_dataset, concatenate_datasets
+import argparse
+import os
+
+import plotly.express as px
+from datasets import concatenate_datasets, load_dataset
 from src.tokenize.tokenizer import Tokenizer
 
 
 def read_data():
-
     data_train = load_dataset(
         BASE_URL + "/data/downloads/TinyStories",
         split="train",
@@ -41,7 +44,7 @@ def text2tokens(
         lambda example: {"idx": tokenizer.encode(example[text_col])},
         batch_size=batch_size,
         batched=batched,
-        num_proc=1,  # TODO: DEBUGG - Tokenizer don't add bos and eos in case of num_proc > 1. This is very weird.
+        num_proc=1,  # TODO: DEBUG - Tokenizer don't add bos and eos in case of num_proc > 1. This is very weird.
         remove_columns=[text_col],
     )
 
@@ -54,9 +57,7 @@ def length(dataset):
     return dataset
 
 
-def pack_dataset(
-    dataset, min_seq_len, max_seq_len, tokenizer, batch_size, batched, num_proc
-):
+def pack_dataset(dataset, min_seq_len, max_seq_len, tokenizer, batch_size, batched, num_proc):
     from src.data_wrangling.pack_overflow_seq import pack_seq
 
     dataset = dataset.map(
@@ -74,9 +75,7 @@ def pack_dataset(
         num_proc=num_proc,
     )
 
-    packed_data = dataset.remove_columns(["idx", "len", "overflow"]).rename_column(
-        "packed", "idx"
-    )
+    packed_data = dataset.remove_columns(["idx", "len", "overflow"]).rename_column("packed", "idx")
     overflow_data = dataset.remove_columns(["idx", "len", "packed"]).rename_column(
         "overflow", "idx"
     )
@@ -141,10 +140,6 @@ def _pre_process(dataset, args):
 
 
 if __name__ == "__main__":
-    import argparse
-    import plotly.express as px
-    import os
-
     parser = argparse.ArgumentParser(description="Process some integers.")
     parser.add_argument(
         "--base_url",
@@ -154,12 +149,8 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=int(1e5), help="Batch size")
     parser.add_argument("--batched", default=True, help="Enable batching")
     parser.add_argument("--num_proc", type=int, default=28, help="Number of processes")
-    parser.add_argument(
-        "--min_seq_len", type=int, default=65, help="Minimum sequence length"
-    )
-    parser.add_argument(
-        "--max_seq_len", type=int, default=512, help="Maximum sequence length"
-    )
+    parser.add_argument("--min_seq_len", type=int, default=65, help="Minimum sequence length")
+    parser.add_argument("--max_seq_len", type=int, default=512, help="Maximum sequence length")
     parser.add_argument("--text_col", default="text", help="Text column name")
     parser.add_argument("--use_cache", default=False, help="Use cache")
 
@@ -174,10 +165,8 @@ if __name__ == "__main__":
     )
 
     data_train.save_to_disk(
-        BASE_URL
-        + f"/data/interim/TinyStories_train_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
+        BASE_URL + f"/data/interim/TinyStories_train_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
     )
     data_validation.save_to_disk(
-        BASE_URL
-        + f"/data/interim/TinyStories_val_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
+        BASE_URL + f"/data/interim/TinyStories_val_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
     )

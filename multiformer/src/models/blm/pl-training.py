@@ -1,103 +1,35 @@
-import torch
-from torch import nn
-import torch.nn.functional as F
 import math
-
-from src.models.blm.config import ModelArgs
-from src.models.blm.block import Block
-
-from src.cells.normalization import RMSLayerNorm
-from typing import Optional
-from src.cells.position import RotaryEmbedding
+import os
 
 import lightning.pytorch as pl
-from torch.utils.data import DataLoader
-from torch.nn.utils.rnn import pad_sequence
-import functools
-
-from datasets import load_from_disk
-from tqdm.notebook import tqdm
-
+import torch
 import torch._dynamo
+import torch.nn.functional as F
+from lightning.pytorch.loggers import WandbLogger
+from src.cells.normalization import RMSLayerNorm
+from src.cells.position import RotaryEmbedding
+from src.models.blm.block import Block
+from src.models.blm.config import ModelArgs
+from src.models.blm.pl_dataloader import TinyStoriesDataloader
+from torch import nn
 
+torch.set_float32_matmul_precision("medium")
 torch._dynamo.config.suppress_errors = True
 
+import wandb
 from lightning.pytorch.callbacks import (
-    GradientAccumulationScheduler,
-    StochasticWeightAveraging,
-    ModelCheckpoint,
     EarlyStopping,
+    GradientAccumulationScheduler,
     LearningRateFinder,
+    ModelCheckpoint,
+    StochasticWeightAveraging,
 )
 
+wandb.login()
 
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
-
-
-class TinyStoriesDataloader(pl.LightningDataModule):
-    def __init__(
-        self, data_path_train, data_path_val, tokenizer_path, batch_size, num_workers
-    ):
-        super().__init__()
-        self.data_path_train = data_path_train
-        self.data_path_val = data_path_val
-
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-
-        self.tokenizer = self._load_tokenizer(tokenizer_path)
-
-    def prepare_data(self):
-        pass
-
-    def _load_tokenizer(self, tokenizer_path):
-        from src.tokenize.tokenizer import Tokenizer
-
-        return Tokenizer(tokenizer_path)
-
-    def _collate_fn(self, batch: int, padding_id: int):
-        batch = pad_sequence(
-            (torch.LongTensor(_["idx"]) for _ in batch),
-            batch_first=True,
-            padding_value=padding_id,
-        )  # TODO : ShortTensor suffice our need but nn.Embedding don't support it. Using LOngTensor is a unnecessary waste of GPU memory
-        x_batch = torch.stack(
-            [en[:-1] for en in batch]
-        )  # Extract x (remove last token)
-        y_batch = torch.stack(
-            [en[1:] for en in batch]
-        )  # Extract y (remove first token)
-        return x_batch, y_batch
-
-    def setup(self, stage):
-
-        self.train_data = load_from_disk(self.data_path_train)
-        self.val_data = load_from_disk(self.data_path_val)
-
-    def train_dataloader(self):
-        return DataLoader(
-            self.train_data,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-            pin_memory=True,
-            collate_fn=functools.partial(
-                self._collate_fn, padding_id=self.tokenizer.eos_id()
-            ),
-        )
-
-    def val_dataloader(self):
-        return DataLoader(
-            self.val_data,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-            pin_memory=True,
-            collate_fn=functools.partial(
-                self._collate_fn, padding_id=self.tokenizer.eos_id()
-            ),
-        )
+pl.seed_everything(123, workers=True)
 
 
 class Transformer(pl.LightningModule):
@@ -130,27 +62,21 @@ class Transformer(pl.LightningModule):
         self.output = nn.Linear(args.emebdding_dim, args.vocab_size, bias=False)
 
         # share the unembedding parameters with the embedding parameters
-        self.tok_embd.weight = (
-            self.output.weight
-        )  # https://paperswithcode.com/method/weight-tying
+        self.tok_embd.weight = self.output.weight  # https://paperswithcode.com/method/weight-tying
 
         # init all weights
         self.apply(self._init_weights)
         # apply special scaled init to the residual projections, per GPT-2 paper
         for pn, p in self.named_parameters():
             if pn.endswith("wo.weight"):
-                torch.nn.init.normal_(
-                    p, mean=0.0, std=0.02 / math.sqrt(2 * args.num_layers)
-                )
+                torch.nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * args.num_layers))
         self.lr = 1e-4
 
     def __repr__(self):
         return f"{self.get_num_params()} Million Params Model"
 
     def get_num_params(self, non_embedding=True):
-        """
-        Return the number of parameters in the model.
-        """
+        """Return the number of parameters in the model."""
         n_params = sum(p.numel() for p in self.parameters())
         if non_embedding:
             n_params -= self.tok_embd.weight.numel()
@@ -176,27 +102,24 @@ class Transformer(pl.LightningModule):
     def _common_step(self, batch, batch_index):
         x, targets = batch
         logits = self.output(self.forward(x))
-        loss = F.cross_entropy(
-            logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1
-        )
+        loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
         return loss
 
     def training_step(self, batch, batch_idx):
-        x, y = batch
-
         loss = self._common_step(batch, batch_idx)
-        self.log_dict({"train_loss": loss}, prog_bar=True, on_step=False, on_epoch=True)
+        if trainer.global_step == 0:
+            wandb.define_metric("train_loss", summary="mean")
+        self.log_dict(
+            {"train_loss": loss, "lr": self.lr}, prog_bar=True, on_step=True, on_epoch=True
+        )
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x, y = batch
-
         loss = self._common_step(batch, batch_idx)
         self.log_dict({"val_loss": loss}, prog_bar=True, on_step=False, on_epoch=True)
         return loss
 
     def configure_optimizers(self):
-
         # start with all of the candidate parameters
         param_dict = {pn: p for pn, p in self.named_parameters()}
         # filter out those that do not require grad
@@ -208,13 +131,9 @@ class Transformer(pl.LightningModule):
             {"params": decay_params, "weight_decay": 1e-2},
             {"params": nodecay_params, "weight_decay": 0.0},
         ]
-        return torch.optim.AdamW(
-            optim_groups, lr=self.lr, betas=(0.9, 0.95), fused=False
-        )
+        return torch.optim.AdamW(optim_groups, lr=self.lr, betas=(0.9, 0.95), fused=False)
 
-    def predict_step(
-        self, batch, batch_idx, max_new_tokens=30, temperature=1.0, top_k=None
-    ):
+    def predict_step(self, batch, batch_idx, max_new_tokens=30, temperature=1.0, top_k=None):
         for _ in range(max_new_tokens):
             # trim the token to the max_len
             if batch.shape[1] > self.max_seq_len:
@@ -245,17 +164,16 @@ class FineTuneLearningRateFinder(LearningRateFinder):
 
     def on_train_epoch_start(self, trainer, pl_module):
         if trainer.current_epoch in self.milestones or trainer.current_epoch == 0:
-
             self.lr_find(trainer, pl_module)
 
 
 if __name__ == "__main__":
-    BASE_URL = "/home/pranav-pc/projects/OpenTransformer/multiformer"
-    data_path_train = BASE_URL + "/data/interim/TinyStories_train_65>tk>512.hf"
-    data_path_val = BASE_URL + "/data/interim/TinyStories_val_65>tk>512.hf"
+    BASE_URL = os.getcwd()
+    data_path_train = BASE_URL + "/data/interim/TinyStories_train_65>tk>1024.hf"
+    data_path_val = BASE_URL + "/data/interim/TinyStories_val_65>tk>1024.hf"
     tokenizer_path = BASE_URL + "/tokenizer_checkpoints"
 
-    batch_size = 16
+    batch_size = 8
     num_workers = 26
     ds = TinyStoriesDataloader(
         data_path_train, data_path_val, tokenizer_path, batch_size, num_workers
@@ -264,7 +182,7 @@ if __name__ == "__main__":
     conf = {
         "vocab_size": 32000,
         "emebdding_dim": 768,
-        "max_seq_len": 512,
+        "max_seq_len": 1024,
         "embedding_dropout": 0.0,
         "rms_norm_eps": 1e-05,
         "rope_scaling": 1.0,
@@ -278,11 +196,13 @@ if __name__ == "__main__":
         "residual_dropout": 0.1,
         "mlp_dropout": 0.0,
         "mlp_hidden_size": int(1.3 * 768),
-        "num_layers": 4,
+        "num_layers": 6,
         "device": (
             "cuda"
             if torch.cuda.is_available()
-            else "mps" if torch.backend.mps.is_available() else "cpu"
+            else "mps"
+            if torch.backend.mps.is_available()
+            else "cpu"
         ),
         "padding_idx": ds.tokenizer.eos_id(),
     }
@@ -291,10 +211,14 @@ if __name__ == "__main__":
     model = Transformer(config)
     model = torch.compile(model, dynamic=True)
 
-    accumulator = GradientAccumulationScheduler(scheduling={0: 6, 4: 4, 8: 3, 20: 1})
+    accumulator = GradientAccumulationScheduler(scheduling={0: 4, 4: 3, 10: 2})
 
-    logger = pl.loggers.TensorBoardLogger(
-        save_dir="./blm-log/", name="blm", version=0.1
+    wandb_logger = WandbLogger(
+        name="blm-1024",
+        save_dir="blm-1024/",
+        version="v2",
+        offline=True,
+        project="tiny-stories-768",
     )
     # profiler = pl.profilers.PyTorchProfiler(
     #     on_trace_ready=torch.profiler.tensorboard_trace_handler('./blm-log/'),
@@ -302,10 +226,10 @@ if __name__ == "__main__":
     # )
     # saves top-K checkpoints based on "train_loss" metric
     checkpoint_callback = ModelCheckpoint(
-        save_top_k=3,
+        save_top_k=2,
         monitor="train_loss",
         mode="min",
-        dirpath="/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/",
+        dirpath="/model_checkpoints/",
         filename="baby-llm-{epoch:02d}-{train_loss:.3f}",
         save_last=True,
         every_n_train_steps=int(1e4),
@@ -313,12 +237,12 @@ if __name__ == "__main__":
     )
     early_stop = EarlyStopping("train_loss", patience=10, verbose=True)
     stochastic_weight_avg = StochasticWeightAveraging(swa_lrs=1e-6)
-    lr_finder = FineTuneLearningRateFinder(milestones=(5, 20))
+    lr_finder = FineTuneLearningRateFinder(milestones=(0, 6))
 
     trainer = pl.Trainer(
-        logger=logger,
+        logger=wandb_logger,
         min_epochs=1,
-        max_epochs=100,
+        max_epochs=6,
         precision="bf16-mixed",
         enable_model_summary=True,
         # profiler=profiler,
@@ -329,21 +253,13 @@ if __name__ == "__main__":
             stochastic_weight_avg,
             lr_finder,
         ],
-        default_root_dir="/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/",
+        default_root_dir=".",
         enable_checkpointing=True,
         # fast_dev_run=True,
-        log_every_n_steps=int(1e2),
+        log_every_n_steps=15,
         enable_progress_bar=True,
         gradient_clip_val=1.0,
     )
-    torch.set_float32_matmul_precision("medium")
-    model = Transformer.load_from_checkpoint(
-        "/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/baby-llm-epoch=06-train_loss=1.248-v1.ckpt"
-    )
-    model = torch.compile(model, dynamic=True)
+
     model.train()
-    trainer.fit(
-        model,
-        ds,
-        ckpt_path="/home/pranav-pc/projects/OpenTransformer/multiformer/model_checkpoints/blm/baby-llm-epoch=06-train_loss=1.248-v1.ckpt",
-    )
+    trainer.fit(model, ds)

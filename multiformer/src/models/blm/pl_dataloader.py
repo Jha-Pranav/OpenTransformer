@@ -1,19 +1,16 @@
-import torch
-
-import lightning.pytorch as pl
-from torch.utils.data import DataLoader
-from torch.nn.utils.rnn import pad_sequence
 import functools
 
+import lightning.pytorch as pl
+import torch
 from datasets import load_from_disk
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import DataLoader
 
 pl.seed_everything(123, workers=True)
 
 
 class TinyStoriesDataloader(pl.LightningDataModule):
-    def __init__(
-        self, data_path_train, data_path_val, tokenizer_path, batch_size, num_workers
-    ):
+    def __init__(self, data_path_train, data_path_val, tokenizer_path, batch_size, num_workers):
         super().__init__()
         self.data_path_train = data_path_train
         self.data_path_val = data_path_val
@@ -37,16 +34,11 @@ class TinyStoriesDataloader(pl.LightningDataModule):
             batch_first=True,
             padding_value=padding_id,
         )  # TODO : ShortTensor suffice our need but nn.Embedding don't support it. Using LOngTensor is a unnecessary waste of GPU memory
-        x_batch = torch.stack(
-            [en[:-1] for en in batch]
-        )  # Extract x (remove last token)
-        y_batch = torch.stack(
-            [en[1:] for en in batch]
-        )  # Extract y (remove first token)
+        x_batch = torch.stack([en[:-1] for en in batch])  # Extract x (remove last token)
+        y_batch = torch.stack([en[1:] for en in batch])  # Extract y (remove first token)
         return x_batch, y_batch
 
     def setup(self, stage):
-
         self.train_data = load_from_disk(self.data_path_train)
         self.val_data = load_from_disk(self.data_path_val)
 
@@ -57,9 +49,7 @@ class TinyStoriesDataloader(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=True,
-            collate_fn=functools.partial(
-                self._collate_fn, padding_id=self.tokenizer.eos_id()
-            ),
+            collate_fn=functools.partial(self._collate_fn, padding_id=self.tokenizer.eos_id()),
         )
 
     def val_dataloader(self):
@@ -69,7 +59,5 @@ class TinyStoriesDataloader(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=True,
-            collate_fn=functools.partial(
-                self._collate_fn, padding_id=self.tokenizer.eos_id()
-            ),
+            collate_fn=functools.partial(self._collate_fn, padding_id=self.tokenizer.eos_id()),
         )
