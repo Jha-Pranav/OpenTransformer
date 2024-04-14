@@ -6,14 +6,15 @@ from src.cells.normalization import RMSLayerNorm
 
 
 class Block(nn.Module):
-    def __init__(self, args) -> None:
+    def __init__(self, args, is_causal=True, attn_mask=None) -> None:
         super().__init__()
-
+        self.is_causal = is_causal
+        self.attn_mask = attn_mask
         self.norms = RMSLayerNorm(args.emebdding_dim, eps=args.rms_norm_eps)
-        self.attention = GQMultiHeadAttention(args, is_causal=True, attn_mask=None)
+        self.attention = GQMultiHeadAttention(args)
         self.mlp = FeedForward(args.emebdding_dim, args.mlp_hidden_size, dropout=args.mlp_dropout)
 
     def forward(self, x, rope_q, rope_k):
-        x = x + self.attention(self.norms(x), rope_q, rope_k)
+        x = x + self.attention(self.norms(x), rope_q, rope_k, self.is_causal, self.attn_mask)
         x = x + self.mlp(self.norms(x))
         return x

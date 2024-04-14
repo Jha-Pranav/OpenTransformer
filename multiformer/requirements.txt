@@ -2,3 +2,5 @@
 -e .
 
 # external requirements
+SentenceTransformer
+faiss
