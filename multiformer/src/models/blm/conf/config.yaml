@@ -1,0 +1,62 @@
+files:
+  data_path_train: "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/TinyStories_train_65>tk>1024.hf"
+  data_path_val: "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/TinyStories_val_65>tk>1024.hf"
+  tokenizer_path: "/home/pranav-pc/projects/OpenTransformer/multiformer/tokenizer_checkpoints"
+paths:
+
+model:
+  vocab_size: 32000
+  embedding_dim: 768
+  max_seq_len: 1024
+  embedding_dropout: 0.0
+  rms_norm_eps: 1e-05
+  rope_scaling: 1.0
+  rope_theta: 10000.0
+  attention_bias: false
+  attention_dropout: 0.0
+  num_attention_heads: 12
+  num_key_value_heads: 12
+  use_cache: true
+  use_sliding_window: true
+  residual_dropout: 0.1
+  mlp_dropout: 0.0
+  mlp_hidden_size: 998
+  num_layers: 6
+  device: cuda
+  padding_idx: 2
+
+trainer_params:
+  batch_size: 12
+  num_workers: 25
+  gradient_accumulation_scheduler: { 0: 4, 4: 3, 10: 2 }
+  wandb_enabled: true
+  wandb:
+    name: "blm-1024"
+    save_dir: "blm-1024/"
+    version: "v1.2"
+    offline: true
+    project: "tiny-stories"
+  checkpoint:
+    save_top_k: 1
+    monitor: "val_loss"
+    mode: "min"
+    dirpath: "checkpoints/"
+    filename: "baby-llm-{epoch:02d}-{train_loss:.3f}"
+    save_last: true
+    every_n_train_steps: 20000
+    save_on_train_epoch_end: true
+  earlystopping:
+    monitor: "train_loss"
+    patience: 10
+    verbose: true
+  trainer:
+    min_epochs: 1
+    max_epochs: 10
+    precision: "bf16-mixed"
+    enable_model_summary: true
+    default_root_dir: "/home/pranav-pc/projects/OpenTransformer/multiformer/"
+    enable_checkpointing: true
+    fast_dev_run: false
+    log_every_n_steps: 20
+    enable_progress_bar: true
+    gradient_clip_val: 1.0

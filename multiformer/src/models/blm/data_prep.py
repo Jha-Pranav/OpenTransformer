@@ -91,7 +91,7 @@ def pack_dataset(dataset, min_seq_len, max_seq_len, tokenizer, batch_size, batch
     return dataset
 
 
-def _pre_process(dataset, args):
+def _pre_process(dataset, args, packed_dataset=True):
     if not args.use_cache:
         dataset.cleanup_cache_files()
 
@@ -110,28 +110,28 @@ def _pre_process(dataset, args):
     # fig.update_layout(title_text=f"Histogram(len)_datasz_{len(dataset['len'])} ")
     # fig.write_html(f"TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}_raw.html")
     # fig.show()
-
-    for _ in range(1, 5):
-        batch_scale = _
-        dataset = pack_dataset(
-            dataset,
-            args.min_seq_len,
-            args.max_seq_len,
-            tokenizer,
-            len(dataset["len"]) // batch_scale,
-            args.batched,
-            args.num_proc,
-        )
-        dataset = length(dataset)
-        dataset = dataset.sort("len")
-        # fig = px.histogram(dataset["len"])
-        # fig.update_layout(
-        #     title_text=f"Histogram(len) {_}_datasz_{len(dataset['len'])} itr"
-        # )
-        # fig.write_html(
-        #     f"TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}_itr{_}.html"
-        # )
-        # fig.show()
+    if packed_dataset:
+        for _ in range(1, 5):
+            batch_scale = _
+            dataset = pack_dataset(
+                dataset,
+                args.min_seq_len,
+                args.max_seq_len,
+                tokenizer,
+                len(dataset["len"]) // batch_scale,
+                args.batched,
+                args.num_proc,
+            )
+            dataset = length(dataset)
+            dataset = dataset.sort("len")
+            # fig = px.histogram(dataset["len"])
+            # fig.update_layout(
+            #     title_text=f"Histogram(len) {_}_datasz_{len(dataset['len'])} itr"
+            # )
+            # fig.write_html(
+            #     f"TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}_itr{_}.html"
+            # )
+            # fig.show()
     # TODO : Below filter should not be required
     dataset = dataset.filter(lambda x: x["len"] < args.max_seq_len)
 
@@ -152,7 +152,8 @@ if __name__ == "__main__":
     parser.add_argument("--min_seq_len", type=int, default=65, help="Minimum sequence length")
     parser.add_argument("--max_seq_len", type=int, default=512, help="Maximum sequence length")
     parser.add_argument("--text_col", default="text", help="Text column name")
-    parser.add_argument("--use_cache", default=False, help="Use cache")
+    parser.add_argument("--use_cache", default=True, help="Use cache")
+    parser.add_argument("--pack_dataset", default=True, help="Pack Dataset")
 
     args = parser.parse_args()
 

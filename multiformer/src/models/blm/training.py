@@ -12,28 +12,23 @@ warnings.filterwarnings("ignore")
 import torch
 
 device = (
-    "cuda"
-    if torch.cuda.is_available()
-    else "mps" if torch.backend.mps.is_available() else "cpu"
+    "cuda" if torch.cuda.is_available() else "mps" if torch.backend.mps.is_available() else "cpu"
 )
 print("GPU  : ", device.upper())
 
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
 
-from tqdm import tqdm
-
-from torch.utils.data import DataLoader
-
-from torch.utils.tensorboard import SummaryWriter
 import torch._dynamo
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 torch._dynamo.config.suppress_errors = True
 
 from contextlib import nullcontext
 
 from src.models.blm.create_dataloader import data_iter
-
 from src.tokenize.tokenizer import Tokenizer
 
 TOKENIZER_CHECKPOINT = (
@@ -51,7 +46,7 @@ train_loader = data_iter(batch=batch)
 
 conf = {
     "vocab_size": 32000,
-    "emebdding_dim": 768,
+    "embedding_dim": 768,
     "max_seq_len": block_size,
     "embedding_dropout": 0.0,
     "rms_norm_eps": 1e-05,
@@ -80,7 +75,6 @@ print(">> Training")
 
 from src.models.blm.config import ModelArgs
 from src.models.blm.model import Transformer
-
 
 config = ModelArgs(**conf)
 model = Transformer(config)

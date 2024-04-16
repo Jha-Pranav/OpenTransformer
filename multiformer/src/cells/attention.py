@@ -56,20 +56,20 @@ class GQMultiHeadAttention(nn.Module):
 
         args.num_attention_heads % args.num_key_value_heads == 0, "Head counts should be divisible KV Heads counts"
         self.group_factor = args.num_attention_heads // args.num_key_value_heads
-        self.head_dim = args.emebdding_dim // args.num_attention_heads
+        self.head_dim = args.embedding_dim // args.num_attention_heads
 
-        self.wq = nn.Linear(args.emebdding_dim, args.emebdding_dim, bias=args.attention_bias)
+        self.wq = nn.Linear(args.embedding_dim, args.embedding_dim, bias=args.attention_bias)
         self.wk = nn.Linear(
-            args.emebdding_dim,
-            args.emebdding_dim // self.group_factor,
+            args.embedding_dim,
+            args.embedding_dim // self.group_factor,
             bias=args.attention_bias,
         )
         self.wv = nn.Linear(
-            args.emebdding_dim,
-            args.emebdding_dim // self.group_factor,
+            args.embedding_dim,
+            args.embedding_dim // self.group_factor,
             bias=args.attention_bias,
         )
-        self.wo = nn.Linear(args.emebdding_dim, args.emebdding_dim, bias=args.attention_bias)
+        self.wo = nn.Linear(args.embedding_dim, args.embedding_dim, bias=args.attention_bias)
 
         self.dropout = args.attention_dropout
         self.residual_dropout = nn.Dropout(args.residual_dropout)

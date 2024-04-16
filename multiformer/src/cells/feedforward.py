@@ -4,7 +4,6 @@ import torch.nn.functional as F
 
 
 class GPT2MLP(nn.Module):
-
     def __init__(self, config):
         super().__init__()
         self.c_fc = nn.Linear(
@@ -27,9 +26,10 @@ class GPT2MLP(nn.Module):
 class FeedForward(nn.Module):
     def __init__(self, d_model: int, d_ff: int, dropout: float = 0.1):
         super().__init__()
-        self.linear1 = nn.Linear(d_model, d_ff)
-        self.linear2 = nn.Linear(d_ff, d_model)
+        self.linear1 = nn.Linear(d_model, d_ff, bias=False)
+        self.linear2 = nn.Linear(d_ff, d_model, bias=False)
+        self.linear3 = nn.Linear(d_model, d_ff, bias=False)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
-        return self.linear2(self.dropout(F.silu(self.linear1(x))))
+        return self.dropout(self.linear2(F.silu(self.linear1(x)) * self.linear3(x)))

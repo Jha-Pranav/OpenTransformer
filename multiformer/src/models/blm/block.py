@@ -10,9 +10,9 @@ class Block(nn.Module):
         super().__init__()
         self.is_causal = is_causal
         self.attn_mask = attn_mask
-        self.norms = RMSLayerNorm(args.emebdding_dim, eps=args.rms_norm_eps)
+        self.norms = RMSLayerNorm(args.embedding_dim, eps=args.rms_norm_eps)
         self.attention = GQMultiHeadAttention(args)
-        self.mlp = FeedForward(args.emebdding_dim, args.mlp_hidden_size, dropout=args.mlp_dropout)
+        self.mlp = FeedForward(args.embedding_dim, args.mlp_hidden_size, dropout=args.mlp_dropout)
 
     def forward(self, x, rope_q, rope_k):
         x = x + self.attention(self.norms(x), rope_q, rope_k, self.is_causal, self.attn_mask)
