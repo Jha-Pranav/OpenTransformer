@@ -1,26 +1,23 @@
 import math
-import os
-
-import hydra
 import lightning.pytorch as pl
 import torch
 import torch._dynamo
 import torch.nn.functional as F
 import wandb
 from huggingface_hub import PyTorchModelHubMixin
-from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
 from src.cells.normalization import RMSLayerNorm
 from src.cells.position import RotaryEmbedding
 from src.models.blm.block import Block
 from src.models.blm.config import ModelArgs
 from src.models.blm.pl_dataloader import TinyStoriesDataloader
 from torch import nn
+from torch.optim.lr_scheduler import CosineAnnealingLR
+
+from omegaconf import OmegaConf
 
 torch.set_float32_matmul_precision("medium")
 torch._dynamo.config.suppress_errors = True
-
-
-from lightning.pytorch import loggers
 from lightning.pytorch.callbacks import (
     EarlyStopping,
     GradientAccumulationScheduler,
@@ -33,9 +30,8 @@ torch.manual_seed(123)
 torch.cuda.manual_seed(123)
 pl.seed_everything(123, workers=True)
 
-
 class Transformer(pl.LightningModule, PyTorchModelHubMixin):
-    def __init__(self, args: ModelArgs, is_causal=True, attn_mask=None):
+    def __init__(self, args: ModelArgs, is_causal=True, attn_mask=None,lr=5e-4,cosine_t_max=int(1e4)):
         super().__init__()
         self.save_hyperparameters()
         self.max_seq_len = args.max_seq_len
@@ -74,7 +70,8 @@ class Transformer(pl.LightningModule, PyTorchModelHubMixin):
         for pn, p in self.named_parameters():
             if pn.endswith("wo.weight"):
                 torch.nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * args.num_layers))
-        self.lr = 1e-4
+        self.lr = lr 
+        self.cosine_t_max = cosine_t_max
 
     def __repr__(self):
         return f"{self.get_num_params()} Million Params Model"
@@ -135,7 +132,14 @@ class Transformer(pl.LightningModule, PyTorchModelHubMixin):
             {"params": decay_params, "weight_decay": 1e-2},
             {"params": nodecay_params, "weight_decay": 0.0},
         ]
-        return torch.optim.AdamW(optim_groups, lr=self.lr, betas=(0.9, 0.95), fused=False)
+        lr_scheduler_init = {"T_max": 1e04, "eta_min": 1e-06}
+        optimizer = torch.optim.AdamW(optim_groups, lr=self.lr, betas=(0.9, 0.95), fused=True)
+        scheduler = {
+            "scheduler": CosineAnnealingLR(optimizer, **lr_scheduler_init),
+            "interval": "step",
+            "frequency":10
+        }
+        return [optimizer], [scheduler]
 
     def predict_step(
         self,
@@ -176,24 +180,18 @@ class Transformer(pl.LightningModule, PyTorchModelHubMixin):
         return batch
 
 
-class FineTuneLearningRateFinder(LearningRateFinder):
-    def __init__(self, milestones, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.milestones = milestones
-
-    def on_train_epoch_start(self, trainer, pl_module):
-        if trainer.current_epoch in self.milestones or trainer.current_epoch == 0:
-            self.lr_find(trainer, pl_module)
 
 
-@hydra.main(config_path="conf", config_name="config")
 def main(args):
+
     ds = TinyStoriesDataloader(
         args.files.data_path_train,
         args.files.data_path_val,
         args.files.tokenizer_path,
         args.trainer_params.batch_size,
         args.trainer_params.num_workers,
+        args.trainer_params.subset_ratio,
+
     )
     model_conf = args.model
     model_conf["padding_idx"] = ds.tokenizer.eos_id()
@@ -204,25 +202,27 @@ def main(args):
     accumulator = GradientAccumulationScheduler(
         scheduling=args.trainer_params.gradient_accumulation_scheduler
     )
-    logger = None
+
+    logger = TensorBoardLogger(save_dir='./lightning-log/', name='TinnyStories', version=0.1)
+
     if args.trainer_params.wandb_enabled:
+        print('W&B')
         wandb.login()
         logger = WandbLogger(**args.trainer_params.wandb)
 
     checkpoint_callback = ModelCheckpoint(**args.trainer_params.checkpoint)
     early_stop = EarlyStopping(**args.trainer_params.earlystopping)
     # stochastic_weight_avg = StochasticWeightAveraging(swa_lrs=1e-6)
-    lr_finder = FineTuneLearningRateFinder(milestones=(0, 6))
-
+    from lightning.pytorch.callbacks import LearningRateMonitor
     trainer = pl.Trainer(
-        logger=logger if logger else loggers.TensorBoardLogger(save_dir="logs/"),
+        logger=logger,
         **args.trainer_params.trainer,
         callbacks=[
-            early_stop,
+            # early_stop,
             checkpoint_callback,
             accumulator,
+            LearningRateMonitor(logging_interval='step'),
             # stochastic_weight_avg,
-            lr_finder,
         ],
     )
 
@@ -231,4 +231,5 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main()
+    config = OmegaConf.load("src/models/blm/conf/config.yaml")
+    main(config)

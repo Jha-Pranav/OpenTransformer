@@ -40,14 +40,18 @@ class Transformer(nn.Module):
         self.output = nn.Linear(args.embedding_dim, args.vocab_size, bias=False)
 
         # share the unembedding parameters with the embedding parameters
-        self.tok_embd.weight = self.output.weight  # https://paperswithcode.com/method/weight-tying
+        self.tok_embd.weight = (
+            self.output.weight
+        )  # https://paperswithcode.com/method/weight-tying
 
         # init all weights
         self.apply(self._init_weights)
         # apply special scaled init to the residual projections, per GPT-2 paper
         for pn, p in self.named_parameters():
             if pn.endswith("wo.weight"):
-                torch.nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * args.num_layers))
+                torch.nn.init.normal_(
+                    p, mean=0.0, std=0.02 / math.sqrt(2 * args.num_layers)
+                )
 
     def __repr__(self):
         return f"{self.get_num_params()} Million Params Model"
@@ -91,5 +95,7 @@ class Transformer(nn.Module):
             )
         else:
             # inference-time mini-optimization: only forward the output on the very last position
-            logits = self.output(x[:, [-1], :])  # note: using list [-1] to preserve the time dim
+            logits = self.output(
+                x[:, [-1], :]
+            )  # note: using list [-1] to preserve the time dim
         return logits, loss

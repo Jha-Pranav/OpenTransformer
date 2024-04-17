@@ -8,7 +8,9 @@ class GPT2CausalSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        assert config.n_embd % config.n_head == 0, "embedding dim should be divisible by head dim"
+        assert (
+            config.n_embd % config.n_head == 0
+        ), "embedding dim should be divisible by head dim"
         self.c_attn = nn.Linear(
             config.n_embd, 3 * config.n_embd, bias=config.bias, device=config.device
         )
@@ -28,9 +30,15 @@ class GPT2CausalSelfAttention(nn.Module):
         B, T, C = x.size()
         q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
 
-        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs)
-        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs)
-        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs)
+        k = k.view(B, T, self.n_head, C // self.n_head).transpose(
+            1, 2
+        )  # (B, nh, T, hs)
+        q = q.view(B, T, self.n_head, C // self.n_head).transpose(
+            1, 2
+        )  # (B, nh, T, hs)
+        v = v.view(B, T, self.n_head, C // self.n_head).transpose(
+            1, 2
+        )  # (B, nh, T, hs)
 
         if self.flash:
             y = F.scaled_dot_product_attention(
@@ -58,7 +66,9 @@ class GQMultiHeadAttention(nn.Module):
         self.group_factor = args.num_attention_heads // args.num_key_value_heads
         self.head_dim = args.embedding_dim // args.num_attention_heads
 
-        self.wq = nn.Linear(args.embedding_dim, args.embedding_dim, bias=args.attention_bias)
+        self.wq = nn.Linear(
+            args.embedding_dim, args.embedding_dim, bias=args.attention_bias
+        )
         self.wk = nn.Linear(
             args.embedding_dim,
             args.embedding_dim // self.group_factor,
@@ -69,7 +79,9 @@ class GQMultiHeadAttention(nn.Module):
             args.embedding_dim // self.group_factor,
             bias=args.attention_bias,
         )
-        self.wo = nn.Linear(args.embedding_dim, args.embedding_dim, bias=args.attention_bias)
+        self.wo = nn.Linear(
+            args.embedding_dim, args.embedding_dim, bias=args.attention_bias
+        )
 
         self.dropout = args.attention_dropout
         self.residual_dropout = nn.Dropout(args.residual_dropout)

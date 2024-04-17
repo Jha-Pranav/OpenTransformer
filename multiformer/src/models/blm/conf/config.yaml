@@ -28,8 +28,9 @@ model:
 trainer_params:
   batch_size: 12
   num_workers: 25
-  gradient_accumulation_scheduler: { 0: 4, 4: 3, 10: 2 }
-  wandb_enabled: true
+  subset_ratio: 0.2  # Train on only 20% of the data
+  gradient_accumulation_scheduler: { 0: 4, 2: 3, 4: 2 }
+  wandb_enabled: false
   wandb:
     name: "blm-1024"
     save_dir: "blm-1024/"
@@ -37,13 +38,13 @@ trainer_params:
     offline: true
     project: "tiny-stories"
   checkpoint:
-    save_top_k: 1
-    monitor: "val_loss"
+    save_top_k: 2
+    monitor: "train_loss"
     mode: "min"
-    dirpath: "checkpoints/"
+    # dirpath: "checkpoints/"
     filename: "baby-llm-{epoch:02d}-{train_loss:.3f}"
     save_last: true
-    every_n_train_steps: 20000
+    every_n_train_steps: 10000
     save_on_train_epoch_end: true
   earlystopping:
     monitor: "train_loss"
@@ -54,9 +55,12 @@ trainer_params:
     max_epochs: 10
     precision: "bf16-mixed"
     enable_model_summary: true
-    default_root_dir: "/home/pranav-pc/projects/OpenTransformer/multiformer/"
+    # default_root_dir: "/home/pranav-pc/projects/OpenTransformer/multiformer/"
     enable_checkpointing: true
     fast_dev_run: false
-    log_every_n_steps: 20
+    log_every_n_steps: 1
     enable_progress_bar: true
-    gradient_clip_val: 1.0
+    # gradient_clip_val: 1.0
+    profiler: "pytorch"
+    check_val_every_n_epoch: null
+    val_check_interval: 1000

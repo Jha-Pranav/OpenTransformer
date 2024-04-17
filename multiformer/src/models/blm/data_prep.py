@@ -57,7 +57,9 @@ def length(dataset):
     return dataset
 
 
-def pack_dataset(dataset, min_seq_len, max_seq_len, tokenizer, batch_size, batched, num_proc):
+def pack_dataset(
+    dataset, min_seq_len, max_seq_len, tokenizer, batch_size, batched, num_proc
+):
     from src.data_wrangling.pack_overflow_seq import pack_seq
 
     dataset = dataset.map(
@@ -75,7 +77,9 @@ def pack_dataset(dataset, min_seq_len, max_seq_len, tokenizer, batch_size, batch
         num_proc=num_proc,
     )
 
-    packed_data = dataset.remove_columns(["idx", "len", "overflow"]).rename_column("packed", "idx")
+    packed_data = dataset.remove_columns(["idx", "len", "overflow"]).rename_column(
+        "packed", "idx"
+    )
     overflow_data = dataset.remove_columns(["idx", "len", "packed"]).rename_column(
         "overflow", "idx"
     )
@@ -149,8 +153,12 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=int(1e5), help="Batch size")
     parser.add_argument("--batched", default=True, help="Enable batching")
     parser.add_argument("--num_proc", type=int, default=28, help="Number of processes")
-    parser.add_argument("--min_seq_len", type=int, default=65, help="Minimum sequence length")
-    parser.add_argument("--max_seq_len", type=int, default=512, help="Maximum sequence length")
+    parser.add_argument(
+        "--min_seq_len", type=int, default=65, help="Minimum sequence length"
+    )
+    parser.add_argument(
+        "--max_seq_len", type=int, default=512, help="Maximum sequence length"
+    )
     parser.add_argument("--text_col", default="text", help="Text column name")
     parser.add_argument("--use_cache", default=True, help="Use cache")
     parser.add_argument("--pack_dataset", default=True, help="Pack Dataset")
@@ -166,8 +174,10 @@ if __name__ == "__main__":
     )
 
     data_train.save_to_disk(
-        BASE_URL + f"/data/interim/TinyStories_train_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
+        BASE_URL
+        + f"/data/interim/TinyStories_train_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
     )
     data_validation.save_to_disk(
-        BASE_URL + f"/data/interim/TinyStories_val_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
+        BASE_URL
+        + f"/data/interim/TinyStories_val_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
     )
