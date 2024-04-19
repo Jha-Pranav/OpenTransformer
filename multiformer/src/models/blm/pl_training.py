@@ -1,20 +1,21 @@
 import math
+
 import lightning.pytorch as pl
 import torch
 import torch._dynamo
 import torch.nn.functional as F
 import wandb
 from huggingface_hub import PyTorchModelHubMixin
-from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
+from lightning.pytorch.loggers import TensorBoardLogger, WandbLogger
+from omegaconf import OmegaConf
 from src.cells.normalization import RMSLayerNorm
 from src.cells.position import RotaryEmbedding
+from src.cells.utils.compile_utils import torch_compile
 from src.models.blm.block import Block
 from src.models.blm.config import ModelArgs
 from src.models.blm.pl_dataloader import TinyStoriesDataloader
 from torch import nn
 from torch.optim.lr_scheduler import CosineAnnealingLR
-
-from omegaconf import OmegaConf
 
 torch.set_float32_matmul_precision("medium")
 torch._dynamo.config.suppress_errors = True
@@ -30,8 +31,11 @@ torch.manual_seed(123)
 torch.cuda.manual_seed(123)
 pl.seed_everything(123, workers=True)
 
+
 class Transformer(pl.LightningModule, PyTorchModelHubMixin):
-    def __init__(self, args: ModelArgs, is_causal=True, attn_mask=None,lr=5e-4,cosine_t_max=int(1e4)):
+    def __init__(
+        self, args: ModelArgs, is_causal=True, attn_mask=None, lr=5e-4, cosine_t_max=int(1e3)
+    ):
         super().__init__()
         self.save_hyperparameters()
         self.max_seq_len = args.max_seq_len
@@ -70,7 +74,7 @@ class Transformer(pl.LightningModule, PyTorchModelHubMixin):
         for pn, p in self.named_parameters():
             if pn.endswith("wo.weight"):
                 torch.nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * args.num_layers))
-        self.lr = lr 
+        self.learning_rate = lr
         self.cosine_t_max = cosine_t_max
 
     def __repr__(self):
@@ -110,14 +114,12 @@ class Transformer(pl.LightningModule, PyTorchModelHubMixin):
         loss = self._common_step(batch, batch_idx)
         # if self.trainer.global_step == 0:
         #     wandb.define_metric("train_loss", summary="mean")
-        self.log_dict(
-            {"train_loss": loss, "lr": self.lr}, prog_bar=True, on_step=True, on_epoch=True
-        )
+        self.log_dict({"train_loss": loss}, prog_bar=True, on_step=True, on_epoch=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
         loss = self._common_step(batch, batch_idx)
-        self.log_dict({"val_loss": loss}, prog_bar=True, on_step=False, on_epoch=True)
+        self.log_dict({"val_loss": loss}, prog_bar=True, on_step=True, on_epoch=False)
         return loss
 
     def configure_optimizers(self):
@@ -132,12 +134,14 @@ class Transformer(pl.LightningModule, PyTorchModelHubMixin):
             {"params": decay_params, "weight_decay": 1e-2},
             {"params": nodecay_params, "weight_decay": 0.0},
         ]
-        lr_scheduler_init = {"T_max": 1e04, "eta_min": 1e-06}
-        optimizer = torch.optim.AdamW(optim_groups, lr=self.lr, betas=(0.9, 0.95), fused=True)
+        lr_scheduler_init = {"T_max": 1e06, "eta_min": 1e-06}
+        optimizer = torch.optim.AdamW(
+            optim_groups, lr=self.learning_rate, betas=(0.9, 0.95), fused=False
+        )
         scheduler = {
             "scheduler": CosineAnnealingLR(optimizer, **lr_scheduler_init),
             "interval": "step",
-            "frequency":10
+            "frequency": 100,
         }
         return [optimizer], [scheduler]
 
@@ -180,10 +184,7 @@ class Transformer(pl.LightningModule, PyTorchModelHubMixin):
         return batch
 
 
-
-
 def main(args):
-
     ds = TinyStoriesDataloader(
         args.files.data_path_train,
         args.files.data_path_val,
@@ -191,43 +192,51 @@ def main(args):
         args.trainer_params.batch_size,
         args.trainer_params.num_workers,
         args.trainer_params.subset_ratio,
-
     )
     model_conf = args.model
     model_conf["padding_idx"] = ds.tokenizer.eos_id()
     config = ModelArgs(**model_conf)
     model = Transformer(config)
-    model = torch.compile(model, dynamic=True)
+
+    model = torch_compile(model, dynamic=True, TORCH_COMPILE_BACKEND="inductor")
 
     accumulator = GradientAccumulationScheduler(
         scheduling=args.trainer_params.gradient_accumulation_scheduler
     )
 
-    logger = TensorBoardLogger(save_dir='./lightning-log/', name='TinnyStories', version=0.1)
+    logger = TensorBoardLogger(save_dir="./lightning-log/", name="TinnyStories", version=0.2)
 
     if args.trainer_params.wandb_enabled:
-        print('W&B')
+        print("W&B")
         wandb.login()
         logger = WandbLogger(**args.trainer_params.wandb)
 
+    # from lightning.pytorch.profilers import PyTorchProfiler
+
+    # from lightning.pytorch.callbacks import DeviceStatsMonitor
+
     checkpoint_callback = ModelCheckpoint(**args.trainer_params.checkpoint)
     early_stop = EarlyStopping(**args.trainer_params.earlystopping)
-    # stochastic_weight_avg = StochasticWeightAveraging(swa_lrs=1e-6)
+    stochastic_weight_avg = StochasticWeightAveraging(swa_lrs=1e-6)
     from lightning.pytorch.callbacks import LearningRateMonitor
+
     trainer = pl.Trainer(
-        logger=logger,
+        # logger=logger,
         **args.trainer_params.trainer,
         callbacks=[
             # early_stop,
             checkpoint_callback,
             accumulator,
-            LearningRateMonitor(logging_interval='step'),
-            # stochastic_weight_avg,
+            LearningRateMonitor(logging_interval="step"),
+            stochastic_weight_avg,
+            # DeviceStatsMonitor()
         ],
     )
-
     model.train()
-    trainer.fit(model, ds)
+    if args.trainer_params.resume_training:
+        trainer.fit(model, ds, ckpt_path=args.paths.resume_from_checkpoint)
+    else:
+        trainer.fit(model, ds)
 
 
 if __name__ == "__main__":

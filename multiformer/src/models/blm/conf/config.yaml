@@ -3,7 +3,7 @@ files:
   data_path_val: "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/TinyStories_val_65>tk>1024.hf"
   tokenizer_path: "/home/pranav-pc/projects/OpenTransformer/multiformer/tokenizer_checkpoints"
 paths:
-
+  resume_from_checkpoint: "./blm-1024/last.ckpt"
 model:
   vocab_size: 32000
   embedding_dim: 768
@@ -21,15 +21,16 @@ model:
   residual_dropout: 0.1
   mlp_dropout: 0.0
   mlp_hidden_size: 998
-  num_layers: 6
+  num_layers: 4
   device: cuda
   padding_idx: 2
 
 trainer_params:
-  batch_size: 12
+  batch_size: 16
   num_workers: 25
-  subset_ratio: 0.2  # Train on only 20% of the data
-  gradient_accumulation_scheduler: { 0: 4, 2: 3, 4: 2 }
+  resume_training: true
+  subset_ratio: 1 # Train on only x% of the data
+  gradient_accumulation_scheduler: { 0: 4, 2: 3, 7: 2 }
   wandb_enabled: false
   wandb:
     name: "blm-1024"
@@ -41,11 +42,12 @@ trainer_params:
     save_top_k: 2
     monitor: "train_loss"
     mode: "min"
-    # dirpath: "checkpoints/"
+    dirpath: "blm-1024/"
     filename: "baby-llm-{epoch:02d}-{train_loss:.3f}"
     save_last: true
-    every_n_train_steps: 10000
+    every_n_train_steps: 2500
     save_on_train_epoch_end: true
+    save_weights_only: true
   earlystopping:
     monitor: "train_loss"
     patience: 10
@@ -54,13 +56,13 @@ trainer_params:
     min_epochs: 1
     max_epochs: 10
     precision: "bf16-mixed"
-    enable_model_summary: true
+    enable_model_summary: false
     # default_root_dir: "/home/pranav-pc/projects/OpenTransformer/multiformer/"
     enable_checkpointing: true
     fast_dev_run: false
-    log_every_n_steps: 1
+    # log_every_n_steps: 10
     enable_progress_bar: true
-    # gradient_clip_val: 1.0
-    profiler: "pytorch"
-    check_val_every_n_epoch: null
-    val_check_interval: 1000
+    gradient_clip_val: 1.0
+    # profiler: "simple"
+    # check_val_every_n_epoch: null
+    # val_check_interval: 100

@@ -1,0 +1,24 @@
+args:
+  vocab_size: 32000
+  embedding_dim: 768
+  max_seq_len: 1024
+  embedding_dropout: 0.0
+  rms_norm_eps: 1.0e-05
+  rope_scaling: 1.0
+  rope_theta: 10000.0
+  attention_bias: false
+  attention_dropout: 0.0
+  num_attention_heads: 12
+  num_key_value_heads: 12
+  use_cache: true
+  use_sliding_window: true
+  residual_dropout: 0.1
+  mlp_hidden_size: 998
+  mlp_dropout: 0.0
+  num_layers: 4
+  device: cuda
+  padding_idx: 2
+is_causal: true
+attn_mask: null
+lr: 0.0005
+cosine_t_max: 1000
