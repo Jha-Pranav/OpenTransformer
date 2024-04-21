@@ -1,3 +1,6 @@
+import re
+
+
 def convert_stories_to_chat_format(text):
     text = "User:" + text
     text = text.replace("Story:", "Assistant:")
@@ -8,7 +11,6 @@ def convert_to_llama_chat_format(dataset):
     # Split the dataset into individual sections based on 'Features:'
     sections = dataset.split("Features:")
     conversation = ""
-
     for section in sections:
         if section.strip():
             # Extracting the relevant information from each section

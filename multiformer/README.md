@@ -1,57 +1,86 @@
-multiformer
-==============================
+# Multiformer 🤖
 
-A short description of the project.
+This project focuses on learning and implementing various aspects of transformer architecture, particularly tailored towards building small, efficient language models suitable for low-end consumer-grade devices. The goal is to understand and create minimalist language models with fewer than 20 million parameters, optimized for specific tasks.
 
-Project Organization
-------------
+## Motivation
 
-    ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
-    ├── README.md          <- The top-level README for developers using this project.
-    ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   └── raw            <- The original, immutable data dump.
-    │
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
-    │
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
-    │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-    │                         the creator's initials, and a short `-` delimited description, e.g.
-    │                         `1.0-jqp-initial-data-exploration`.
-    │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-    │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
-    │
-    ├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-    │                         generated with `pip freeze > requirements.txt`
-    │
-    ├── setup.py           <- makes project pip installable (pip install -e .) so src can be imported
-    ├── src                <- Source code for use in this project.
-    │   ├── __init__.py    <- Makes src a Python module
-    │   │
-    │   ├── data           <- Scripts to download or generate data
-    │   │   └── make_dataset.py
-    │   │
-    │   ├── features       <- Scripts to turn raw data into features for modeling
-    │   │   └── build_features.py
-    │   │
-    │   ├── models         <- Scripts to train models and then use trained models to make
-    │   │   │                 predictions
-    │   │   ├── predict_model.py
-    │   │   └── train_model.py
-    │   │
-    │   └── visualization  <- Scripts to create exploratory and results oriented visualizations
-    │       └── visualize.py
-    │
-    └── tox.ini            <- tox file with settings for running tox; see tox.readthedocs.io
+Large language models like demand substantial hardware resources, making them unsuitable for deployment on low-end consumer grade devices. This project aims to explore transformer architecture, develop a deep understanding, and implement efficient models that can run on resource-constrained devices.
 
+## Libraries Used
 
---------
+- pytorch
+- pytorch-lightning
+- sentencepiece-tokenizer
 
-<p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
+## Usage
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/Jha-Pranav/OpenTransformer.git
+   cd multiformer
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   pip install -e .
+   ```
+
+3. Explore the codebase and run specific scripts for data preparation, training, fine-tuning, or inference.
+
+## Project Structure
+
+| Folder/File       | Description                                                                |
+| ----------------- | -------------------------------------------------------------------------- |
+| `cells`           | Contains modules for different components of the transformer architecture. |
+| `data_wrangling`  | Includes scripts for data preprocessing and manipulation.                  |
+| `models`          | Holds implementations of different models, including BLM and GPT2.         |
+| `tokenize`        | Contains files related to tokenization of text data.                       |
+| `weights_adapter` | Includes scripts for adapting weights between different models.            |
+
+### Experimental Notebooks Overview
+
+| Folder/File           | Description                                                                                               |
+| --------------------- | --------------------------------------------------------------------------------------------------------- |
+| `data-prep`           | Notebooks for data preparation tasks, including tokenization, de-duplication, and data stream processing. |
+| `eval`                | Notebooks for evaluating model performance and metrics, along with datasets for evaluation.               |
+| `experiments`         | Notebooks for conducting various experiments, such as implementing a VAE on embeddings.                   |
+| `fine-tune`           | Notebooks for fine-tuning models on specific tasks, including causal and non-causal approaches.           |
+| `inference`           | Notebooks for inference tasks, including generating text using trained models.                            |
+| `interpretability`    | (Folder) Notebooks related to model interpretability techniques.                                          |
+| `lora`                | Notebooks related to the LoRa project.                                                                    |
+| `models`              | Notebooks specific to model implementations and training, such as BLM and GPT2.                           |
+| `optimization`        | Notebooks focusing on optimization techniques, such as performance tuning and torch compilation.          |
+| `Q`                   | Notebooks related to quantization techniques.                                                             |
+| `transformer_anatomy` | Notebooks exploring the anatomy of transformer models, covering various components and mechanisms.        |
+| `weights_adapter`     | Notebooks for adapting weights between different models, including Hugging Face and others.               |
+
+Each notebook serves a specific purpose, ranging from data preparation and model training to evaluation and optimization techniques.
+
+## Contribution Guidelines
+
+Contributions are welcome! If you'd like to contribute to this project, please follow these steps:
+
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and commit them with descriptive messages.
+4. Push your changes to your fork.
+5. Submit a pull request to the main repository's `develop` branch.
+
+Please ensure your code follows the project's coding standards and includes appropriate documentation.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](multiformer/LICENSE) file for details.
+
+## Acknowledgements
+
+- [karpathy/nanoGPT](https://github.com/karpathy/nanoGPT)
+- [karpathy/llama2.c](https://github.com/karpathy/llama2.c)
+- [rasbt/LLMs-from-scratch](https://github.com/rasbt/LLMs-from-scratch)
+- [rasbt/MachineLearning-QandAI-book](https://github.com/rasbt/MachineLearning-QandAI-book)
+- [meta-llama/llama](https://github.com/meta-llama/llama)
+- [pytorch/torchtune](https://github.com/pytorch/torchtune)
+
+Feel free to reach out with any questions, suggestions, or feedback! Let's build something amazing together! 🚀

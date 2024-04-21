@@ -2,25 +2,29 @@ import argparse
 import os
 
 import plotly.express as px
-from datasets import concatenate_datasets, load_dataset
+from datasets import concatenate_datasets, load_dataset, load_from_disk
 from src.tokenize.tokenizer import Tokenizer
 
 
-def read_data(dataset_name, cache_path):
-    data_train = load_dataset(
-        dataset_name,
-        cache_dir=cache_path,
-        split="train",
-    )
-    data_validation = load_dataset(
-        dataset_name,
-        cache_dir=cache_path,
-        split="validation",
-    )
+def read_data(dataset_name, cache_path, processed_data=False):
+    if processed_data:
+        ds = load_from_disk(cache_path)
+        data_train, data_validation = ds["train"], ds["validation"]
+    else:
+        data_train = load_dataset(
+            dataset_name,
+            cache_dir=cache_path,
+            split="train",
+        )
+        data_validation = load_dataset(
+            dataset_name,
+            cache_dir=cache_path,
+            split="validation",
+        )
     return data_train, data_validation
 
 
-def load_tokenizer():
+def load_tokenizer(BASE_URL):
     TOKENIZER_CHECKPOINT = BASE_URL + "/tokenizer_checkpoints/"
 
     tokenizer = Tokenizer(TOKENIZER_CHECKPOINT)
@@ -93,11 +97,11 @@ def pack_dataset(dataset, min_seq_len, max_seq_len, tokenizer, batch_size, batch
     return dataset
 
 
-def _pre_process(dataset, args, packed_dataset=True):
+def _pre_process(dataset, args):
     if not args.use_cache:
         dataset.cleanup_cache_files()
 
-    tokenizer = load_tokenizer()
+    tokenizer = load_tokenizer(args.base_url)
 
     dataset = text2tokens(
         dataset, tokenizer, args.batch_size, args.batched, args.num_proc, args.text_col
@@ -112,7 +116,7 @@ def _pre_process(dataset, args, packed_dataset=True):
     # fig.update_layout(title_text=f"Histogram(len)_datasz_{len(dataset['len'])} ")
     # fig.write_html(f"TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}_raw.html")
     # fig.show()
-    if packed_dataset:
+    if args.pack_dataset:
         for _ in range(1, 3):
             batch_scale = _
             dataset = pack_dataset(
@@ -146,11 +150,13 @@ if __name__ == "__main__":
         default=os.getcwd(),
         help="Base URL",
     )
-    parser.add_argument("--dataset", help="[train_dataset,validation_dataset]")
+    parser.add_argument(
+        "--processed_data", type=bool, default=False, help="Pass processed data path"
+    )
     parser.add_argument(
         "--dataset_name",
         type=str,
-        default="gpt2",
+        default=None,
         help="hf dataset name eg: skeskinen/TinyStories-Instruct-hf",
     )
     parser.add_argument(
@@ -168,10 +174,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     BASE_URL = args.base_url
-    if args.dataset:
-        data_train, data_validation = args.dataset
-    else:
-        data_train, data_validation = read_data(args.dataset_name, args.dataset_cache_dir)
+    if not args.dataset_name:
+        raise Exception("Dataset name is required.")
+
+    data_train, data_validation = read_data(
+        args.dataset_name, args.dataset_cache_dir, args.processed_data
+    )
 
     data_train, data_validation = _pre_process(data_train, args), _pre_process(
         data_validation, args
@@ -185,3 +193,5 @@ if __name__ == "__main__":
         BASE_URL
         + f"/data/interim/{args.dataset_cache_dir}_val_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
     )
+
+# Eg command : python3 src/models/blm/data_prep.py --processed_data=true --dataset_name="TinyStories-Instruct-hf" --dataset_cache_dir="/home/pranav-pc/projects/OpenTransformer/multiformer/data/processed/TinyStories-Instruct-hf" --pack_dataset=false
