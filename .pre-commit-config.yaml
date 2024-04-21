@@ -142,6 +142,6 @@ repos:
       - id: nbqa-flake8
         args:
           [
-            "--extend-ignore=E203,E402,E501,F401,F841,E266,E262",
+            "--extend-ignore=E203,E402,E501,F401,F841,E266,E262,E741",
             "--exclude=logs/*,data/*",
           ]

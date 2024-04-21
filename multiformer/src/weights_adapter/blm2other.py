@@ -13,7 +13,7 @@ _FROM_HF = {
     "model.layers.{}.mlp.gate_proj.weight": "layers.{}.mlp.linear1.weight",
     "model.layers.{}.mlp.up_proj.weight": "layers.{}.mlp.linear3.weight",
     "model.layers.{}.mlp.down_proj.weight": "layers.{}.mlp.linear2.weight",
-    "model.layers.{}.input_layernorm.weight": "layers.{}.norms.w2",
+    "model.layers.{}.input_layernorm.weight": "layers.{}.norms.w",
     "model.layers.{}.post_attention_layernorm.weight": "layers.{}.norms.w",
     "model.norm.weight": "norm.w",
     "lm_head.weight": "output.weight",

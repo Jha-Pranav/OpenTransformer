@@ -6,13 +6,15 @@ from datasets import concatenate_datasets, load_dataset
 from src.tokenize.tokenizer import Tokenizer
 
 
-def read_data():
+def read_data(dataset_name, cache_path):
     data_train = load_dataset(
-        BASE_URL + "/data/downloads/TinyStories",
+        dataset_name,
+        cache_dir=cache_path,
         split="train",
     )
     data_validation = load_dataset(
-        BASE_URL + "/data/downloads/TinyStories",
+        dataset_name,
+        cache_dir=cache_path,
         split="validation",
     )
     return data_train, data_validation
@@ -144,6 +146,16 @@ if __name__ == "__main__":
         default=os.getcwd(),
         help="Base URL",
     )
+    parser.add_argument("--dataset", help="[train_dataset,validation_dataset]")
+    parser.add_argument(
+        "--dataset_name",
+        type=str,
+        default="gpt2",
+        help="hf dataset name eg: skeskinen/TinyStories-Instruct-hf",
+    )
+    parser.add_argument(
+        "--dataset_cache_dir", type=str, default="./data/downloads", help="cache dir"
+    )
     parser.add_argument("--batch_size", type=int, default=int(1e5), help="Batch size")
     parser.add_argument("--batched", default=True, help="Enable batching")
     parser.add_argument("--num_proc", type=int, default=28, help="Number of processes")
@@ -156,16 +168,20 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     BASE_URL = args.base_url
-
-    data_train, data_validation = read_data()
+    if args.dataset:
+        data_train, data_validation = args.dataset
+    else:
+        data_train, data_validation = read_data(args.dataset_name, args.dataset_cache_dir)
 
     data_train, data_validation = _pre_process(data_train, args), _pre_process(
         data_validation, args
     )
 
     data_train.save_to_disk(
-        BASE_URL + f"/data/interim/TinyStories_train_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
+        BASE_URL
+        + f"/data/interim/{args.dataset_name}_train_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
     )
     data_validation.save_to_disk(
-        BASE_URL + f"/data/interim/TinyStories_val_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
+        BASE_URL
+        + f"/data/interim/{args.dataset_cache_dir}_val_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
     )

@@ -145,6 +145,7 @@ class Transformer(pl.LightningModule, PyTorchModelHubMixin):
         }
         return [optimizer], [scheduler]
 
+    @torch.inference_mode()
     def predict_step(
         self,
         batch,
