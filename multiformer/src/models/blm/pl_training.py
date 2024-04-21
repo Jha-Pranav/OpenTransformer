@@ -34,7 +34,12 @@ pl.seed_everything(123, workers=True)
 
 class Transformer(pl.LightningModule, PyTorchModelHubMixin):
     def __init__(
-        self, args: ModelArgs, is_causal=True, attn_mask=None, lr=5e-4, cosine_t_max=int(1e3)
+        self,
+        args: ModelArgs,
+        is_causal=True,
+        attn_mask=None,
+        lr=5e-4,
+        cosine_t_max=int(1e3),
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -178,7 +183,8 @@ class Transformer(pl.LightningModule, PyTorchModelHubMixin):
             if conditional_break:
                 last_three_tokens = batch[-1][-len(conditional_break) :]
                 if torch.equal(
-                    last_three_tokens, torch.LongTensor(conditional_break).to(batch.device)
+                    last_three_tokens,
+                    torch.LongTensor(conditional_break).to(batch.device),
                 ):
                     break
 
