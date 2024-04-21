@@ -58,18 +58,6 @@ Large language models like demand substantial hardware resources, making them un
 
 Each notebook serves a specific purpose, ranging from data preparation and model training to evaluation and optimization techniques.
 
-## Contribution Guidelines
-
-Contributions are welcome! If you'd like to contribute to this project, please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Make your changes and commit them with descriptive messages.
-4. Push your changes to your fork.
-5. Submit a pull request to the main repository's `develop` branch.
-
-Please ensure your code follows the project's coding standards and includes appropriate documentation.
-
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](multiformer/LICENSE) file for details.
