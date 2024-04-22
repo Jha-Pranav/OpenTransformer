@@ -2,5 +2,8 @@
 -e .
 
 # external requirements
+pytorch
+lightning
 SentenceTransformer
 faiss
+wandb

@@ -14,7 +14,7 @@ Large language models like demand substantial hardware resources, making them un
 - pytorch-lightning
 - sentencepiece-tokenizer
 - hf datasets
-- weights and biases
+- w&b
 
 ## Usage
 

@@ -98,9 +98,6 @@ def pack_dataset(dataset, min_seq_len, max_seq_len, tokenizer, batch_size, batch
 
 
 def _pre_process(dataset, args):
-    if not args.use_cache:
-        dataset.cleanup_cache_files()
-
     tokenizer = load_tokenizer(args.base_url)
 
     dataset = text2tokens(
@@ -116,6 +113,7 @@ def _pre_process(dataset, args):
     # fig.update_layout(title_text=f"Histogram(len)_datasz_{len(dataset['len'])} ")
     # fig.write_html(f"TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}_raw.html")
     # fig.show()
+    print(args.pack_dataset)
     if args.pack_dataset:
         for _ in range(1, 3):
             batch_scale = _
@@ -136,7 +134,7 @@ def _pre_process(dataset, args):
             #     f"TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}_itr{_}.html"
             # )
             fig.show()
-    # TODO : Below filter should not be required
+
     dataset = dataset.filter(lambda x: x["len"] < args.max_seq_len)
 
     dataset = dataset.remove_columns("len")
@@ -151,7 +149,7 @@ if __name__ == "__main__":
         help="Base URL",
     )
     parser.add_argument(
-        "--processed_data", type=bool, default=False, help="Pass processed data path"
+        "--processed_data", type=bool, default=True, help="Pass processed data path"
     )
     parser.add_argument(
         "--dataset_name",
@@ -168,8 +166,8 @@ if __name__ == "__main__":
     parser.add_argument("--min_seq_len", type=int, default=65, help="Minimum sequence length")
     parser.add_argument("--max_seq_len", type=int, default=1024, help="Maximum sequence length")
     parser.add_argument("--text_col", default="text", help="Text column name")
-    parser.add_argument("--use_cache", default=True, help="Use cache")
-    parser.add_argument("--pack_dataset", default=True, help="Pack Dataset")
+    parser.add_argument("--use_cache", type=bool, default=False, help="Use cache")
+    parser.add_argument("--pack_dataset", type=bool, default=False, help="Pack Dataset")
 
     args = parser.parse_args()
 
@@ -191,7 +189,7 @@ if __name__ == "__main__":
     )
     data_validation.save_to_disk(
         BASE_URL
-        + f"/data/interim/{args.dataset_cache_dir}_val_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
+        + f"/data/interim/{args.dataset_name}_val_{args.min_seq_len}>tk>{args.max_seq_len}.hf"
     )
 
 # Eg command : python3 src/models/blm/data_prep.py --processed_data=true --dataset_name="TinyStories-Instruct-hf" --dataset_cache_dir="/home/pranav-pc/projects/OpenTransformer/multiformer/data/processed/TinyStories-Instruct-hf" --pack_dataset=false
