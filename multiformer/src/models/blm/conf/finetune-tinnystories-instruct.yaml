@@ -4,49 +4,29 @@ files:
   tokenizer_path: "/home/pranav-pc/projects/OpenTransformer/multiformer/tokenizer_checkpoints"
 paths:
   base_model_checkpoint: "/home/pranav-pc/projects/OpenTransformer/multiformer/blm-1024/checkpoints/last.ckpt"
-  resume_from_checkpoint: "/home/pranav-pc/projects/OpenTransformer/multiformer/blm-fine-tuned-maths/last.ckpt"
-# model:
-#   vocab_size: 32000
-#   embedding_dim: 768
-#   max_seq_len: 1024
-#   embedding_dropout: 0.0
-#   rms_norm_eps: 1e-05
-#   rope_scaling: 1.0
-#   rope_theta: 10000.0
-#   attention_bias: false
-#   attention_dropout: 0.0
-#   num_attention_heads: 12
-#   num_key_value_heads: 12
-#   use_cache: true
-#   use_sliding_window: true
-#   residual_dropout: 0.1
-#   mlp_dropout: 0.0
-#   mlp_hidden_size: 998
-#   num_layers: 4
-#   device: cuda
-#   padding_idx: 2
+  resume_from_checkpoint: "/home/pranav-pc/projects/OpenTransformer/multiformer/blm-finetuned-tinnystories/last.ckpt"
 
 trainer_params:
-  batch_size: 32
+  batch_size: 16
   num_workers: 25
-  resume_training: false
+  resume_training: true
   subset_ratio: 1 # Train on only x% of the data
   gradient_accumulation_scheduler: { 0: 4, 5: 3, 7: 2 }
   wandb_enabled: false
-  wandb:
-    name: "blm-1024"
-    save_dir: "blm-1024/"
-    version: "v1.2"
-    offline: true
-    project: "tiny-stories"
+  # wandb:
+  #   name: "blm-1024"
+  #   save_dir: "blm-1024/"
+  #   version: "v1.2"
+  #   offline: true
+  #   project: "tiny-stories"
   checkpoint:
     save_top_k: 2
     monitor: "train_loss"
     mode: "min"
-    dirpath: "blm-fine-tuned-maths/"
+    dirpath: "blm-finetuned-tinnystories/"
     filename: "baby-llm-instruct-{epoch:02d}-{train_loss:.3f}"
     save_last: true
-    # every_n_train_steps: 1000
+    every_n_train_steps: 500
     save_on_train_epoch_end: true
     save_weights_only: true
   earlystopping:
@@ -55,7 +35,7 @@ trainer_params:
     verbose: true
   trainer:
     min_epochs: 1
-    max_epochs: 15
+    max_epochs: 5
     precision: "bf16-mixed"
     enable_model_summary: false
     # default_root_dir: "/home/pranav-pc/projects/OpenTransformer/multiformer/"
@@ -66,4 +46,4 @@ trainer_params:
     gradient_clip_val: 1.0
     # profiler: "simple"
     # check_val_every_n_epoch: null
-    # val_check_interval: 100
+    val_check_interval: 10000

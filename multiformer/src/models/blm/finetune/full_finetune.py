@@ -22,7 +22,6 @@ from src.models.blm.pl_dataloader import TinyStoriesDataloader
 class FineTuneBLM(pl.LightningModule):
     def __init__(self, model, learning_rate=5e-5, dropout_rate=0.1):
         super().__init__()
-        print(model)
         self.learning_rate = learning_rate
         self.model = model
         self.output = self.model.output
@@ -78,10 +77,12 @@ class FineTuneBLM(pl.LightningModule):
         top_k=None,
         conditional_break: list = None,
     ):
+        input_len = batch.shape[1]
+        print(input_len)
         for _ in range(max_new_tokens):
             # trim the token to the max_len
-            if batch.shape[1] > self.max_seq_len:
-                batch = batch[:, -self.max_seq_len :]
+            if batch.shape[1] > self.model.max_seq_len:
+                batch = batch[:, -self.model.max_seq_len :]
             # inference-time mini-optimization: only forward the output on the very last position
             logits = self.output(
                 self(batch)[:, [-1], :]
@@ -105,8 +106,8 @@ class FineTuneBLM(pl.LightningModule):
                     torch.LongTensor(conditional_break).to(batch.device),
                 ):
                     break
-
-        return batch
+        print(len(batch))
+        return batch[:, input_len:]
 
 
 def main(args):
@@ -123,9 +124,9 @@ def main(args):
 
     MODEL_CHECKPOINT = args.paths.base_model_checkpoint
     base_model = Transformer.load_from_checkpoint(MODEL_CHECKPOINT)
-    base_model = torch_compile(base_model, dynamic=True, TORCH_COMPILE_BACKEND="inductor")
 
     model = FineTuneBLM(base_model)
+    model = torch_compile(model, dynamic=True, TORCH_COMPILE_BACKEND="inductor")
     accumulator = GradientAccumulationScheduler(
         scheduling=args.trainer_params.gradient_accumulation_scheduler
     )
@@ -170,6 +171,6 @@ def main(args):
 
 
 if __name__ == "__main__":
-    config_path = "./src/models/blm/conf/finetune-maths-problem-config.yaml"
+    config_path = "./src/models/blm/conf/finetune-tinnystories-instruct.yaml"
     args = OmegaConf.load(config_path)
     main(args)
