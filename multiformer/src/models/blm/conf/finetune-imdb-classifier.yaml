@@ -1,0 +1,48 @@
+files:
+  data_path: "stanfordnlp/imdb"
+  tokenizer_path: "/home/pranav-pc/projects/OpenTransformer/multiformer/tokenizer_checkpoints"
+paths:
+  base_model_checkpoint: "/home/pranav-pc/projects/OpenTransformer/multiformer/blm-1024/checkpoints/last.ckpt"
+  resume_from_checkpoint: "/home/pranav-pc/projects/OpenTransformer/multiformer/notebooks/fine-tune/blm-fine-tuned-imdb-v3/epoch=10-step=818.ckpt"
+
+trainer_params:
+  batch_size: 128
+  num_workers: 25
+  resume_training: true
+  subset_ratio: 1 # Train on only x% of the data
+  gradient_accumulation_scheduler: { 0: 2, 5: 3, 7: 4 }
+  wandb_enabled: false
+  wandb:
+    name: "baby-language-model"
+    save_dir: "blm-instruct-imdb-v3/"
+    version: "v1.0"
+    offline: false
+    project: "baby-language-model"
+  checkpoint:
+    save_top_k: 1
+    monitor: "val_f1score"
+    mode: "max"
+    dirpath: "blm-fine-tuned-imdb-v3/"
+    # filename: "baby-llm-instruct-{epoch:02d}-{train_loss:.3f}"
+    save_last: true
+    # every_n_train_steps: 5000
+    save_on_train_epoch_end: true
+    save_weights_only: true
+  earlystopping:
+    monitor: "val_f1score"
+    patience: 10
+    verbose: true
+  trainer:
+    min_epochs: 1
+    max_epochs: 20
+    precision: "bf16-mixed"
+    enable_model_summary: true
+    # default_root_dir: "/home/pranav-pc/projects/OpenTransformer/multiformer/"
+    enable_checkpointing: true
+    fast_dev_run: false
+    # log_every_n_steps: 10
+    enable_progress_bar: true
+    gradient_clip_val: 1.0
+    # profiler: "simple"
+    # check_val_every_n_epoch: null
+    # val_check_interval: 100
