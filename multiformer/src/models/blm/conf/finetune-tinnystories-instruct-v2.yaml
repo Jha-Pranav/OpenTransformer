@@ -1,40 +1,41 @@
 files:
-  data_path: "stanfordnlp/imdb"
+  data_path_train: "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/Instruct-hf_train_0>tk>1024.hf"
+  data_path_val: "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/Instruct-hf_val_0>tk>1024.hf"
   tokenizer_path: "/home/pranav-pc/projects/OpenTransformer/multiformer/tokenizer_checkpoints"
 paths:
   base_model_checkpoint: "/home/pranav-pc/projects/OpenTransformer/multiformer/blm-1024/checkpoints/last.ckpt"
-  resume_from_checkpoint: "/home/pranav-pc/projects/OpenTransformer/multiformer/blm-fine-tuned-imdb/last.ckpt"
+  resume_from_checkpoint: "/home/pranav-pc/projects/OpenTransformer/multiformer/blm-instruct/last-v2.ckpt"
 
 trainer_params:
-  batch_size: 128
-  num_workers: 25
-  resume_training: true
+  batch_size: 6
+  num_workers: 24
+  resume_training: false
   subset_ratio: 1 # Train on only x% of the data
-  gradient_accumulation_scheduler: { 0: 2, 5: 3, 7: 4 }
-  wandb_enabled: false
+  gradient_accumulation_scheduler: { 0: 4, 5: 3, 7: 2 }
+  wandb_enabled: true
   wandb:
-    name: "baby-language-model"
-    save_dir: "blm-instruct-imdb-v1/"
-    version: "v1.0"
+    name: "blm-instruct-v2"
+    save_dir: "blm-instruct-v2/"
+    version: "v0.5"
     offline: false
-    project: "baby-language-model"
+    project: "tiny-stories"
   checkpoint:
     save_top_k: 1
-    monitor: "val_f1score"
-    mode: "max"
-    dirpath: "blm-fine-tuned-imdb-v1/"
+    monitor: "train_loss"
+    mode: "min"
+    dirpath: "blm-instruct/"
     # filename: "baby-llm-instruct-{epoch:02d}-{train_loss:.3f}"
     save_last: true
-    # every_n_train_steps: 5000
+    every_n_train_steps: 10000
     save_on_train_epoch_end: true
     save_weights_only: true
   earlystopping:
-    monitor: "val_f1score"
+    monitor: "train_loss"
     patience: 10
     verbose: true
   trainer:
     min_epochs: 1
-    max_epochs: 20
+    max_epochs: 10
     precision: "bf16-mixed"
     enable_model_summary: true
     # default_root_dir: "/home/pranav-pc/projects/OpenTransformer/multiformer/"
@@ -45,4 +46,4 @@ trainer_params:
     gradient_clip_val: 1.0
     # profiler: "simple"
     # check_val_every_n_epoch: null
-    # val_check_interval: 100
+    # val_check_interval: 20000

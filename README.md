@@ -40,9 +40,8 @@ This project is licensed under the MIT License. See the [LICENSE](multiformer/LI
 ## Acknowledgements
 
 - [karpathy/nanoGPT](https://github.com/karpathy/nanoGPT)
-- [karpathy/llama2.c](https://github.com/karpathy/llama2.c)
 - [rasbt/LLMs-from-scratch](https://github.com/rasbt/LLMs-from-scratch)
-- [rasbt/MachineLearning-QandAI-book](https://github.com/rasbt/MachineLearning-QandAI-book)
+- [rasbt/substack](https://substack.com/@rasbt/posts)
 - [meta-llama/llama](https://github.com/meta-llama/llama)
 - [pytorch/torchtune](https://github.com/pytorch/torchtune)
 

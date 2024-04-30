@@ -113,7 +113,6 @@ def _pre_process(dataset, args):
     # fig.update_layout(title_text=f"Histogram(len)_datasz_{len(dataset['len'])} ")
     # fig.write_html(f"TinyStories_{args.min_seq_len}>tk>{args.max_seq_len}_raw.html")
     # fig.show()
-    print(args.pack_dataset)
     if args.pack_dataset:
         for _ in range(1, 3):
             batch_scale = _
@@ -137,7 +136,7 @@ def _pre_process(dataset, args):
 
     dataset = dataset.filter(lambda x: x["len"] < args.max_seq_len)
 
-    dataset = dataset.remove_columns("len")
+    dataset = dataset.remove_columns(["len", "source"])
     return dataset
 
 
@@ -162,10 +161,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("--batch_size", type=int, default=int(1e5), help="Batch size")
     parser.add_argument("--batched", default=True, help="Enable batching")
-    parser.add_argument("--num_proc", type=int, default=28, help="Number of processes")
-    parser.add_argument("--min_seq_len", type=int, default=65, help="Minimum sequence length")
+    parser.add_argument("--num_proc", type=int, default=30, help="Number of processes")
+    parser.add_argument("--min_seq_len", type=int, default=0, help="Minimum sequence length")
     parser.add_argument("--max_seq_len", type=int, default=1024, help="Maximum sequence length")
-    parser.add_argument("--text_col", default="text", help="Text column name")
+    parser.add_argument("--text_col", default="prompt", help="Text column name")
     parser.add_argument("--use_cache", type=bool, default=False, help="Use cache")
     parser.add_argument("--pack_dataset", type=bool, default=False, help="Pack Dataset")
 
