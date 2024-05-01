@@ -78,7 +78,6 @@ class FineTuneBLM(pl.LightningModule):
         conditional_break: list = None,
     ):
         input_len = batch.shape[1]
-        print(input_len)
         for _ in range(max_new_tokens):
             # trim the token to the max_len
             if batch.shape[1] > self.model.max_seq_len:
@@ -106,7 +105,6 @@ class FineTuneBLM(pl.LightningModule):
                     torch.LongTensor(conditional_break).to(batch.device),
                 ):
                     break
-        print(len(batch))
         return batch[:, input_len:]
 
 
@@ -131,9 +129,7 @@ def main(args):
         scheduling=args.trainer_params.gradient_accumulation_scheduler
     )
 
-    logger = TensorBoardLogger(
-        save_dir="./lightning-log-ft-maths/", name="TinnyStories-instruct-maths", version=0.2
-    )
+    logger = TensorBoardLogger(save_dir="./log-blm-instruct/", name="blm-instruct", version=0.1)
 
     if args.trainer_params.wandb_enabled:
         import wandb
@@ -152,7 +148,7 @@ def main(args):
     from lightning.pytorch.callbacks import LearningRateMonitor
 
     trainer = pl.Trainer(
-        # logger=logger,
+        logger=logger,
         **args.trainer_params.trainer,
         callbacks=[
             # early_stop,
