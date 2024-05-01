@@ -28,7 +28,7 @@ Large language models like demand substantial hardware resources, making them un
 2. Install dependencies:
 
    ```bash
-   pip install -e .
+   pip install -r requirements.txt
    ```
 
 3. Explore the codebase and run specific scripts for data preparation, training, fine-tuning, or inference.
