@@ -41,18 +41,18 @@ To download the Base Language model trained on Tinystories dataset, run:
 ./download_checkpoints.sh "blm-medium"
 ```
 
-| Model      | Description                                       | Inference Notebook                                      |
-| ---------- | ------------------------------------------------- | ------------------------------------------------------- |
-| blm-medium | 18.6M Params Model trained on Tinystories dataset | multiformer/notebooks/inference/tinystories-maths.ipynb |
+| Model      | Description                                       | Inference Notebook                                                                 |
+| ---------- | ------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| blm-medium | 18.6M Params Model trained on Tinystories dataset | [Text Generation Notebook](multiformer/notebooks/inference/tinystories-base.ipynb) |
 
 ## How to Fine-Tune Pretrained Models
 
-| Task                                    | Notebook                                                                |
-| --------------------------------------- | ----------------------------------------------------------------------- |
-| Full Finetune Causal task               | /multiformer/notebooks/fine-tune/full-finetune-causal.ipynb             |
-| Full Finetune Classification task       | multiformer/notebooks/fine-tune/full-finetune-classify.ipynb            |
-| Finetune Only Last Layer Classification | multiformer/notebooks/fine-tune/finetune-only-last-layer-classify.ipynb |
-| Freeze Model Finetune Classification v2 | multiformer/notebooks/fine-tune/freeze-model-finetune-classify.ipynb    |
+| Task                                  | Notebook                                                                |
+| ------------------------------------- | ----------------------------------------------------------------------- |
+| Full Finetune Causal for task         | /multiformer/notebooks/fine-tune/full-finetune-causal.ipynb             |
+| Full Finetune Classification for task | multiformer/notebooks/fine-tune/full-finetune-classify.ipynb            |
+| Finetune Only Last Layer              | multiformer/notebooks/fine-tune/finetune-only-last-layer-classify.ipynb |
+| Finetune Freeze Model                 | multiformer/notebooks/fine-tune/freeze-model-finetune-classify.ipynb    |
 
 ## How to Train Model from Scratch
 
