@@ -231,7 +231,7 @@ def main(args):
         # logger=logger,
         **args.trainer_params.trainer,
         callbacks=[
-            # early_stop,
+            early_stop,
             checkpoint_callback,
             accumulator,
             LearningRateMonitor(logging_interval="step"),

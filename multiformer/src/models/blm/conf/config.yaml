@@ -1,43 +1,105 @@
+# Path to the training data file.
 files:
   data_path_train: "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/TinyStories_train_65>tk>1024.hf"
+
+  # Path to the validation data file.
   data_path_val: "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/TinyStories_val_65>tk>1024.hf"
+
+  # Path to the tokenizer checkpoint.
   tokenizer_path: "/home/pranav-pc/projects/OpenTransformer/multiformer/tokenizer_checkpoints"
+
+# Path to resume training from a specific checkpoint.
 paths:
   resume_from_checkpoint: "./blm-1024/last.ckpt"
+
+# Model configuration parameters.
 model:
+  # Size of the vocabulary.
   vocab_size: 32000
+
+  # Dimensionality of the token embeddings.
   embedding_dim: 768
+
+  # Maximum sequence length.
   max_seq_len: 1024
+
+  # Dropout probability for token embeddings.
   embedding_dropout: 0.0
+
+  # Epsilon value for RMS normalization.
   rms_norm_eps: 1e-05
+
+  # Scaling factor for ROPE.
   rope_scaling: 1.0
+
+  # Theta value for ROPE.
   rope_theta: 10000.0
+
+  # Whether to include attention bias.
   attention_bias: false
+
+  # Dropout probability for attention weights.
   attention_dropout: 0.0
+
+  # Number of attention heads.
   num_attention_heads: 12
+
+  # Number of key-value heads.
   num_key_value_heads: 12
+
+  # Whether to use cache for attention mechanism.
   use_cache: true
+
+  # Whether to use sliding window attention.
   use_sliding_window: true
+
+  # Dropout probability for residual connections.
   residual_dropout: 0.1
+
+  # Dropout probability for MLP layers.
   mlp_dropout: 0.0
+
+  # Hidden size of MLP layers.
   mlp_hidden_size: 998
+
+  # Number of transformer layers.
   num_layers: 4
+
+  # Device for model training (e.g., cuda).
   device: cuda
+
+  # Index for padding token.
   padding_idx: 2
 
+# Trainer parameters.
 trainer_params:
+  # Batch size for training.
   batch_size: 16
+
+  # Number of workers for data loading.
   num_workers: 25
+
+  # Whether to resume training from a checkpoint.
   resume_training: true
-  subset_ratio: 1 # Train on only x% of the data
+
+  # Ratio of data to use for training.
+  subset_ratio: 1
+
+  # Gradient accumulation scheduler.
   gradient_accumulation_scheduler: { 0: 4, 2: 3, 7: 2 }
+
+  # Whether to enable Weights & Biases logging.
   wandb_enabled: false
+
+  # Weights & Biases configuration.
   wandb:
     name: "blm-1024"
     save_dir: "blm-1024/"
     version: "v1.2"
     offline: true
     project: "tiny-stories"
+
+  # Checkpoint parameters.
   checkpoint:
     save_top_k: 2
     monitor: "train_loss"
@@ -48,21 +110,35 @@ trainer_params:
     every_n_train_steps: 2500
     save_on_train_epoch_end: true
     save_weights_only: true
+
+  # Early stopping parameters.
   earlystopping:
     monitor: "train_loss"
     patience: 10
     verbose: true
+
+  # Trainer settings.
   trainer:
+    # Minimum number of epochs to train.
     min_epochs: 1
+
+    # Maximum number of epochs to train.
     max_epochs: 10
+
+    # Precision for training (e.g., bf16-mixed).
     precision: "bf16-mixed"
+
+    # Whether to enable model summary.
     enable_model_summary: false
-    # default_root_dir: "/home/pranav-pc/projects/OpenTransformer/multiformer/"
+
+    # Whether to enable checkpointing during training.
     enable_checkpointing: true
+
+    # Whether to run a fast development run.
     fast_dev_run: false
-    # log_every_n_steps: 10
+
+    # Whether to enable progress bar during training.
     enable_progress_bar: true
+
+    # Value for gradient clipping.
     gradient_clip_val: 1.0
-    # profiler: "simple"
-    # check_val_every_n_epoch: null
-    # val_check_interval: 100
