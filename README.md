@@ -52,7 +52,7 @@ To download the Base Language model trained on Tinystories dataset, run:
 | Full Finetune Causal for task         | [Full Finetune Causal](multiformer/notebooks/fine-tune/full-finetune-causal.ipynb)                  |
 | Full Finetune Classification for task | [Full Finetune Classification](multiformer/notebooks/fine-tune/full-finetune-classify.ipynb)        |
 | Finetune Only Last Layer              | [Finetune Only Last Layer](multiformer/notebooks/fine-tune/finetune-only-last-layer-classify.ipynb) |
-| Finetune Freeze Model                 | [Fine only head](multiformer/notebooks/fine-tune/freeze-model-finetune-classify.ipynb)              |
+| Finetune Freeze Model                 | [Finetune only head](multiformer/notebooks/fine-tune/freeze-model-finetune-classify.ipynb)              |
 
 ## How to Train Model from Scratch
 
