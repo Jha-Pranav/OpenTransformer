@@ -12,9 +12,7 @@ warnings.filterwarnings("ignore")
 import torch
 
 device = (
-    "cuda"
-    if torch.cuda.is_available()
-    else "mps" if torch.backend.mps.is_available() else "cpu"
+    "cuda" if torch.cuda.is_available() else "mps" if torch.backend.mps.is_available() else "cpu"
 )
 print("GPU  : ", device.upper())
 

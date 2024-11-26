@@ -1,9 +1,8 @@
-from sentencepiece import SentencePieceProcessor
-
-
 import os
 from pathlib import Path
-from typing import Union, Optional
+from typing import Optional, Union
+
+from sentencepiece import SentencePieceProcessor
 
 
 class Tokenizer:
@@ -13,9 +12,7 @@ class Tokenizer:
             checkpoint_path
         ), f"The tokenizer.model file doesn't exist this {checkpoint_dir}"
 
-        self.tokenizer = SentencePieceProcessor(
-            checkpoint_path, add_bos=True, add_eos=True
-        )
+        self.tokenizer = SentencePieceProcessor(checkpoint_path, add_bos=True, add_eos=True)
 
     def __new__(cls, *args, **kwargs):
         instance = super().__new__(cls)

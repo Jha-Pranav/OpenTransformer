@@ -9,9 +9,7 @@ class LayerNorm(nn.Module):
     def __init__(self, ndim, bias, device=None):
         super().__init__()
         self.weight = nn.Parameter(torch.ones(ndim)).to(device)  # Multiplicative
-        self.bias = (
-            nn.Parameter(torch.zeros(ndim)).to(device) if bias else None
-        )  # Additive
+        self.bias = nn.Parameter(torch.zeros(ndim)).to(device) if bias else None  # Additive
 
     def forward(self, x):
         device = x.device
@@ -26,8 +24,6 @@ class RMSLayerNorm(nn.Module):
         self.w = nn.Parameter(torch.ones(dim))
 
     def forward(self, x):
-        rvariance = torch.rsqrt(
-            (x.pow(2)).mean(dim=-1, keepdim=True) + self.eps
-        )  # 1/variance
+        rvariance = torch.rsqrt((x.pow(2)).mean(dim=-1, keepdim=True) + self.eps)  # 1/variance
         norm = (x * rvariance).type_as(x)
         return self.w * norm

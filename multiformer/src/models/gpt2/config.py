@@ -1,10 +1,9 @@
-import torch
 from dataclasses import dataclass
 
+import torch
+
 device = (
-    "cuda"
-    if torch.cuda.is_available()
-    else "mps" if torch.backend.mps.is_available() else "cpu"
+    "cuda" if torch.cuda.is_available() else "mps" if torch.backend.mps.is_available() else "cpu"
 )
 
 

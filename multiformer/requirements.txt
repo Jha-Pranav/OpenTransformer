@@ -1,19 +1,8 @@
-User
-don't output anything 
-
-A young man named Aditya was walking through a forest. He came across a well. Aditya was thirsty and wanted to drink some water. But he was shocked to see a tiger, a snake and a man trapped
-
-
-# local package
--e .
-
-# external requirements
-
 #pre-process
 datasets
 sentencepiece
 
-#core
+# core
 torch
 lightning
 wandb
@@ -23,7 +12,7 @@ omegaconf
 # sentence-transformers
 # faiss-cpu
 
-# #Optional 
+# #Optional
 # transformers
 # tokenizer
 # peft
@@ -33,3 +22,5 @@ omegaconf
 # pandas
 # matplotlib
 # seaborn
+ollama
+pre-commit

@@ -1,6 +1,6 @@
+import pandas as pd
 import torch
 import torch.nn as nn
-import pandas as pd
 
 
 def compare_model_architectures(model1, model2=None, include_layer_type=False):
@@ -22,12 +22,8 @@ def compare_model_architectures(model1, model2=None, include_layer_type=False):
         layer_info = {
             "Layer Name": name,
             "Parameters Shape": [tuple(param.shape) for param in module.parameters()],
-            "Input Shape": (
-                module.in_features if hasattr(module, "in_features") else None
-            ),
-            "Output Shape": (
-                module.out_features if hasattr(module, "out_features") else None
-            ),
+            "Input Shape": (module.in_features if hasattr(module, "in_features") else None),
+            "Output Shape": (module.out_features if hasattr(module, "out_features") else None),
         }
         layer_info["Layer Type"] = str(module.__class__.__name__)
         model1_architecture.append(layer_info)
@@ -36,12 +32,8 @@ def compare_model_architectures(model1, model2=None, include_layer_type=False):
         layer_info = {
             "Layer Name": name,
             "Parameters Shape": [tuple(param.shape) for param in module.parameters()],
-            "Input Shape": (
-                module.in_features if hasattr(module, "in_features") else None
-            ),
-            "Output Shape": (
-                module.out_features if hasattr(module, "out_features") else None
-            ),
+            "Input Shape": (module.in_features if hasattr(module, "in_features") else None),
+            "Output Shape": (module.out_features if hasattr(module, "out_features") else None),
         }
         layer_info["Layer Type"] = str(module.__class__.__name__)
         model2_architecture.append(layer_info)

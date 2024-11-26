@@ -18,6 +18,4 @@ data = dataset.map(
     remove_columns=["text"],
 )
 
-data.save_to_disk(
-    "/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/imdb.hf"
-)
+data.save_to_disk("/home/pranav-pc/projects/OpenTransformer/multiformer/data/interim/imdb.hf")

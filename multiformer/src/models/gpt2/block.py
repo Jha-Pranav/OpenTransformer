@@ -1,10 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from src.cells.normalization import LayerNorm
 from src.cells.attention import GPT2CausalSelfAttention
 from src.cells.feedforward import GPT2MLP
+from src.cells.normalization import LayerNorm
 
 
 class GPT2Block(nn.Module):

@@ -1,8 +1,8 @@
+import math
+from typing import Union
+
 import torch
 import torch.nn as nn
-import math
-
-from typing import Union
 
 
 class PostionalEncoding(nn.Module):
@@ -20,8 +20,7 @@ class PostionalEncoding(nn.Module):
         pos = torch.arange(0, max_len).unsqueeze(1)  # (max_len,1)
         # ignore multiplication with 2
         inv_den = torch.exp(
-            (torch.arange(0, embedding_dim, 2, dtype=torch.float) / embedding_dim)
-            * -constant
+            (torch.arange(0, embedding_dim, 2, dtype=torch.float) / embedding_dim) * -constant
         )  # (embedding_dim/2)
 
         pe[:, 0::2] = torch.sin(pos * inv_den)  # (max_len,embedding_dim/2)
@@ -54,9 +53,7 @@ class RotaryEmbedding(nn.Module):
         theta = 1.0 / base ** (
             torch.arange(0, h_dim, 2, dtype=torch.int16, device=device) / h_dim
         )  #  (h_dim/2)
-        m = torch.arange(seq_len, dtype=torch.int16, device=device).type_as(
-            theta
-        )  #  (seq_len)
+        m = torch.arange(seq_len, dtype=torch.int16, device=device).type_as(theta)  #  (seq_len)
         m /= scaling_factor
         m0 = torch.outer(m, theta)  # (seq_len,h_dim/2)
         self.m0 = torch.polar(torch.ones_like(m0), m0)  # e^i0 = cos0 +isin0

@@ -25,9 +25,7 @@ class TinyStoriesDataloader(pl.LightningDataModule):
 
         self.batch_size = batch_size
         self.num_workers = num_workers
-        self.subset_ratio = (
-            subset_ratio  # Only load subset of data while performing sanity check
-        )
+        self.subset_ratio = subset_ratio  # Only load subset of data while performing sanity check
         assert 0 < self.subset_ratio <= 1, "the subset ratio can only lies b/w (0-1]"
         self.tokenizer = self._load_tokenizer(tokenizer_path)
 
@@ -45,12 +43,8 @@ class TinyStoriesDataloader(pl.LightningDataModule):
             batch_first=True,
             padding_value=padding_id,
         )  # TODO : ShortTensor suffice our need but nn.Embedding don't support it. Using LongTensor is a unnecessary waste of GPU memory
-        x_batch = torch.stack(
-            [en[:-1] for en in batch]
-        )  # Extract x (remove last token)
-        y_batch = torch.stack(
-            [en[1:] for en in batch]
-        )  # Extract y (remove first token)
+        x_batch = torch.stack([en[:-1] for en in batch])  # Extract x (remove last token)
+        y_batch = torch.stack([en[1:] for en in batch])  # Extract y (remove first token)
         return x_batch, y_batch
 
     def setup(self, stage):
@@ -68,9 +62,7 @@ class TinyStoriesDataloader(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=True,
-            collate_fn=functools.partial(
-                self._collate_fn, padding_id=self.tokenizer.eos_id()
-            ),
+            collate_fn=functools.partial(self._collate_fn, padding_id=self.tokenizer.eos_id()),
         )
 
     def val_dataloader(self):
@@ -80,7 +72,5 @@ class TinyStoriesDataloader(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=True,
-            collate_fn=functools.partial(
-                self._collate_fn, padding_id=self.tokenizer.eos_id()
-            ),
+            collate_fn=functools.partial(self._collate_fn, padding_id=self.tokenizer.eos_id()),
         )

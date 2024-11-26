@@ -1,4 +1,5 @@
 from importlib.metadata import version
+
 import torch
 
 print("TORCH VERSION :", version("torch"))
@@ -13,13 +14,13 @@ print("Device  : ", device.upper())
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
 
-from torch import nn
-import torch.nn.functional as F
 import math
 
-from src.models.gpt2.block import GPT2Block
+import torch.nn.functional as F
 from src.cells.normalization import LayerNorm
+from src.models.gpt2.block import GPT2Block
 from src.models.gpt2.config import GPT2Config
+from torch import nn
 
 
 class GPT2(nn.Module):
@@ -60,9 +61,7 @@ class GPT2(nn.Module):
         # apply special scaled init to the residual projections, per GPT-2 paper
         for pn, p in self.named_parameters():
             if pn.endswith("c_proj.weight"):
-                torch.nn.init.normal_(
-                    p, mean=0.0, std=0.02 / math.sqrt(2 * config.n_layer)
-                )
+                torch.nn.init.normal_(p, mean=0.0, std=0.02 / math.sqrt(2 * config.n_layer))
         # report number of parameters
         print("number of parameters: %.2fM" % (self.get_num_params() / 1e6))
 
@@ -111,9 +110,7 @@ class GPT2(nn.Module):
             )
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
-            logits = self.lm_head(
-                x[:, [-1], :]
-            )  # note: using list [-1] to preserve the  dim
+            logits = self.lm_head(x[:, [-1], :])  # note: using list [-1] to preserve the  dim
             loss = None
 
         return logits, loss
@@ -124,9 +121,7 @@ class GPT2(nn.Module):
         # but want to use a smaller block size for some smaller, simpler model
         assert block_size <= self.config.block_size
         self.config.block_size = block_size
-        self.transformer.wpe.weight = nn.Parameter(
-            self.transformer.wpe.weight[:block_size]
-        )
+        self.transformer.wpe.weight = nn.Parameter(self.transformer.wpe.weight[:block_size])
         for block in self.transformer.h:
             if hasattr(block.attn, "bias"):
                 block.attn.bias = block.attn.bias[:, :, :block_size, :block_size]
@@ -208,9 +203,7 @@ class GPT2(nn.Module):
         for _ in range(max_new_tokens):
             # if the sequence context is growing too long we must crop it at block_size
             idx_cond = (
-                idx
-                if idx.size(1) <= self.config.block_size
-                else idx[:, -self.config.block_size :]
+                idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size :]
             )
             # forward the model to get the logits for the index in the sequence
             logits, _ = self(idx_cond)
@@ -231,7 +224,6 @@ class GPT2(nn.Module):
 
 
 if __name__ == "__main__":
-
     from src.models.gpt2.config import GPT2Config
     from src.models.gpt2.model import GPT2
 

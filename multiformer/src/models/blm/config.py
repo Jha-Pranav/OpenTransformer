@@ -23,9 +23,7 @@ class ModelArgs:
     use_sliding_window: bool = True
     residual_dropout: float = 0.1
 
-    mlp_hidden_size: int = int(
-        1.3 * embedding_dim
-    )  # set some lambda function or scaling factor
+    mlp_hidden_size: int = int(1.3 * embedding_dim)  # set some lambda function or scaling factor
     mlp_dropout: float = 0.0
 
     num_layers: int = 32

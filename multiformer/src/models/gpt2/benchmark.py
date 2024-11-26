@@ -1,23 +1,17 @@
 from importlib.metadata import version
-import torch
 
+import torch
 
 print("TORCH VERSION :", version("torch"))
 device = (
-    "cuda"
-    if torch.cuda.is_available()
-    else "mps" if torch.backend.mps.is_available() else "cpu"
+    "cuda" if torch.cuda.is_available() else "mps" if torch.backend.mps.is_available() else "cpu"
 )
 print("Device  : ", device.upper())
 
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
 
-dtype = (
-    "bfloat16"
-    if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
-    else "float16"
-)
+dtype = "bfloat16" if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else "float16"
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -30,10 +24,9 @@ ctx = (
     else torch.amp.autocast(device_type=device, dtype=torch.bfloat16)
 )
 
-from model import GPT2
 from config import GPT2Config
+from model import GPT2
 from src.cells.optim_func import config_optimizer
-
 
 # ----------
 num_sample = 2
@@ -87,9 +80,7 @@ if profile:
             torch.profiler.ProfilerActivity.CPU,
             torch.profiler.ProfilerActivity.CUDA,
         ],
-        schedule=torch.profiler.schedule(
-            wait=wait, warmup=warmup, active=active, repeat=1
-        ),
+        schedule=torch.profiler.schedule(wait=wait, warmup=warmup, active=active, repeat=1),
         on_trace_ready=torch.profiler.tensorboard_trace_handler("./bench_log"),
         record_shapes=True,
         profile_memory=True,
@@ -97,7 +88,6 @@ if profile:
         with_flops=True,
         with_modules=False,  # only for torchscript models atm
     ) as prof:
-
         X, Y = get_batch("train")
         for k in range(num_steps):
             with ctx:

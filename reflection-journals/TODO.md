@@ -5,6 +5,7 @@
 - [ ] adamW with fused=True
 
 ## Pytorch code optimization
+
 - [ ] AMP
 - [ ] Quantization
 - [ ] Gradient Clipping

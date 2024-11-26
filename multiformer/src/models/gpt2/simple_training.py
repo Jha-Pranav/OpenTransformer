@@ -1,37 +1,33 @@
 # --------------- IMPORTs -----------------------
-from importlib.metadata import version
-import torch
 import warnings
+from importlib.metadata import version
+
+import torch
 
 # Silence all warnings
 warnings.filterwarnings("ignore")
 
 print("TORCH VERSION :", version("torch"))
 device = (
-    "cuda"
-    if torch.cuda.is_available()
-    else "mps" if torch.backend.mps.is_available() else "cpu"
+    "cuda" if torch.cuda.is_available() else "mps" if torch.backend.mps.is_available() else "cpu"
 )
 print("GPU  : ", device.upper())
 
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
 
+import torch._dynamo
+from datasets import load_from_disk
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from torch.utils.data import DataLoader
-from torch.nn.utils.rnn import pad_sequence
-from datasets import load_from_disk
-
-from torch.utils.tensorboard import SummaryWriter
-import torch._dynamo
-
 torch._dynamo.config.suppress_errors = True
-from src.tokenize.tokenizer import Tokenizer
-
 import os
-
 from contextlib import nullcontext
+
+from src.tokenize.tokenizer import Tokenizer
 
 # -------------------------------------------
 BASE_URL = "/home/pranav-pc/projects/OpenTransformer/multiformer/"
@@ -80,15 +76,12 @@ def collate_fn(batch):
 train_data = sorted(data["train"]["idx"], key=lambda x: len(x))
 
 # Create DataLoader with collate function
-train_loader = DataLoader(
-    train_data, batch_size=batch, collate_fn=collate_fn, shuffle=False
-)
+train_loader = DataLoader(train_data, batch_size=batch, collate_fn=collate_fn, shuffle=False)
 # ---------------------------------------------
 ## Training
 
 from src.models.gpt2.config import GPT2Config
 from src.models.gpt2.model import GPT2
-
 
 config = GPT2Config(**gpt_conf)
 model = GPT2(config)
@@ -123,9 +116,7 @@ for epoch in range(num_epochs):
             torch.profiler.ProfilerActivity.CPU,
             torch.profiler.ProfilerActivity.CUDA,
         ],
-        on_trace_ready=torch.profiler.tensorboard_trace_handler(
-            f"tensorboard/gpt2/epoch_{epoch}"
-        ),
+        on_trace_ready=torch.profiler.tensorboard_trace_handler(f"tensorboard/gpt2/epoch_{epoch}"),
         record_shapes=True,
         profile_memory=True,
         with_stack=False,

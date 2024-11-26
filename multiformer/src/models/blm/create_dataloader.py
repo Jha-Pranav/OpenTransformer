@@ -1,10 +1,11 @@
+import functools
+import os
+
+import torch
 from datasets import load_from_disk
 from src.tokenize.tokenizer import Tokenizer
-import os
-import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Sampler
-import functools
 
 
 # Define collate function to handle padding
@@ -25,9 +26,7 @@ class SampleByLen(Sampler):
         self.data_source = data_source
 
     def __iter__(self):
-        indices = sorted(
-            range(len(self.data_source)), key=lambda i: len(self.data_source[i])
-        )
+        indices = sorted(range(len(self.data_source)), key=lambda i: len(self.data_source[i]))
         return iter(indices)
 
 

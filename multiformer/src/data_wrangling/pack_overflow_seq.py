@@ -16,11 +16,7 @@ def pack_seq(
 
     while start < end:
         if count[end] >= max_seq_len:
-            index = [
-                indx
-                for indx, i in enumerate(idx[end][:max_seq_len])
-                if i == delimiter_id
-            ]
+            index = [indx for indx, i in enumerate(idx[end][:max_seq_len]) if i == delimiter_id]
             if len(index):
                 index = index[-1] + 1
                 trim_token = idx[end][:index] + [eos_id]

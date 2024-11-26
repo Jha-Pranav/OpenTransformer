@@ -9,13 +9,16 @@ Previously, my learning journey lacked a structured path, often leading me to ab
 ### Entry Log:
 
 - **March 31, 2024**
+
   - Experimented with `torch.compile`
   - Explored `lightning-thunder`
 
 - **April 01, 2024**
+
   - Dived into "Mixture of Experts" concept
-  
+
 - **April 06, 2024**
+
   - **Init:**
     - Started work on "Baby Language Model"
   - **Model.py Updates:**

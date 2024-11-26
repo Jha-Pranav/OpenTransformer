@@ -1,23 +1,18 @@
 from importlib.metadata import version
-import torch
+
 import tiktoken
+import torch
 
 print("TORCH VERSION :", version("torch"))
 device = (
-    "cuda"
-    if torch.cuda.is_available()
-    else "mps" if torch.backend.mps.is_available() else "cpu"
+    "cuda" if torch.cuda.is_available() else "mps" if torch.backend.mps.is_available() else "cpu"
 )
 print("Device  : ", device.upper())
 
 torch.manual_seed(123)
 torch.cuda.manual_seed(123)
 
-dtype = (
-    "bfloat16"
-    if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
-    else "float16"
-)
+dtype = "bfloat16" if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else "float16"
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True

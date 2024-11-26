@@ -3,9 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def config_optimizer(
-    model, weight_decay, learning_rate, betas, device, fused: bool = True
-):
+def config_optimizer(model, weight_decay, learning_rate, betas, device, fused: bool = True):
     # start with all of the candidate parameters
     param_dict = {pn: p for pn, p in model.named_parameters()}
     # filter out those that do not require grad
@@ -27,9 +25,7 @@ def config_optimizer(
     )
     use_fused = fused and device == "cuda"
     extra_args = dict(fused=True) if use_fused else dict()
-    optimizer = torch.optim.AdamW(
-        optim_groups, lr=learning_rate, betas=betas, **extra_args
-    )
+    optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=betas, **extra_args)
     print(f"using fused AdamW: {use_fused}")
 
     return optimizer
