@@ -5,11 +5,13 @@
 This script automatically captures the last executed command in your shell (Bash or Zsh) and checks if it resulted in an error. If an error occurs, it queries a local AI model using Ollama to generate insights and suggestions for fixing the issue. The response is then displayed in a visually enhanced format using `glow` and `lolcat`.
 
 ## How it Works
--- Capturing the Last Command: The script captures the last command executed in your terminal (works with both Bash and Zsh).
-Error Detection: It checks if the command resulted in an error by analyzing the exit code.
--- Querying the AI Model: If there’s an error, the script sends the failed command and error message to a local AI model (using Ollama) to provide insights and debugging suggestions.
--- Displaying Results: The AI response is formatted for easy reading with the help of glow and lolcat for some fun, and it's displayed in your terminal.
--- Lock File Mechanism: The script ensures that API calls are not repeated unnecessarily by using a lock file mechanism, which prevents multiple requests for the same error.
+
+1. **Capturing the Last Command**: The script captures the last executed command in your terminal (works with both Bash and Zsh).
+2. **Error Detection**: It checks if the command resulted in an error by analyzing the exit code.
+3. **Querying the AI Model**: If there’s an error, the script sends the failed command and error message to a local AI model (using Ollama) to provide insights and debugging suggestions.
+4. **Displaying Results**: The AI response is formatted for easy reading using `glow` and `lolcat` and displayed in your terminal.
+5. **Lock File Mechanism**: To prevent repeated API calls, the script uses a lock file to ensure only one request is made for the same error.
+
 
 ## Installation Steps
 
